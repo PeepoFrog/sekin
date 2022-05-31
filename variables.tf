@@ -1,5 +1,5 @@
 variable "HCLOUD_TOKEN" {
-  type = string
+  type      = string
   sensitive = true
 }
 
