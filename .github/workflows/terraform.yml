@@ -86,7 +86,7 @@ jobs:
     # Generates an execution plan for Terraform
     - name: Terraform Plan
       env:
-        TF_VAR_hcloud_token &{{ secrets.HCLOUD_API_TOKEN }}
+        TF_VAR_hcloud_token: ${{ secrets.HCLOUD_API_TOKEN }}
       run: terraform plan -input=false
 
       # On push to master, build or change infrastructure according to Terraform configuration files
