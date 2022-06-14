@@ -19,8 +19,9 @@ variable "instances" {
   default = "1"
 }
 
+#CPX31 vCPU 4 RAM 8 NVME GB160 TRAF GB20
 variable "server_type" {
-  default = "CPX31"
+  default = "cpx31" #servers names should be lowecase without whitespaces
 }
 
 variable "os_type" {
