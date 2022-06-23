@@ -1,4 +1,4 @@
 resource "hcloud_ssh_key" "default" {
   name       = "hetzner_key"
-  public_key = "${ secrets.SSH_KEY_PUB }"
+  public_key = var.ssh_key_pub
 }
