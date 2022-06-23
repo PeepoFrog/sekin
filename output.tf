@@ -11,3 +11,7 @@ output "web_servers_ips" {
     server.name => server.ipv4_address
   }
 }
+
+output "Keys" {
+  value = var.ssh_key_pub
+}
