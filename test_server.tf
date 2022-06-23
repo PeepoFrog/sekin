@@ -8,5 +8,5 @@ resource "hcloud_server" "web" {
   labels = {
     type = "web"
   }
-  user_data = file("./config.yaml") # TO BE CHANGED
+  #user_data = file("./config.yaml") # TO BE CHANGED
 }
