@@ -4,7 +4,7 @@ resource "hcloud_server" "web" {
   image       = var.os_type
   server_type = var.server_type
   location    = var.location
-  #ssh_keys    = [hcloud_ssh_key.default.id]
+  ssh_keys    = [hcloud_ssh_key.default.id]
   labels = {
     type = "web"
   }
