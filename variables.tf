@@ -35,3 +35,4 @@ variable "disk_size" {
 variable "ip_range" {
   default = "10.0.1.0/24"
 }
+variable "ssh_key_pub" {}
