@@ -37,5 +37,5 @@ jobs:
           context: .
           file: ./${{ env.NAME }}.Dockerfile
           push: true
-          tags: ghcr.io/${{ env.NAME }}:${{ env.VERSION }}
+          tags: ghcr.io/kiracore/sekin:${{ env.NAME }}_${{ env.VERSION }}
 
