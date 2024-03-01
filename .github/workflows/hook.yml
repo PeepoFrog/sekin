@@ -5,7 +5,7 @@ on:
     types: [release_merged]
 
 jobs:
-  Print_version:
+  Build_and_publish:
     runs-on: ubuntu-20.04
     steps:
       - name: Extract repository release name 
@@ -37,5 +37,5 @@ jobs:
           context: .
           file: ./${{ env.NAME }}.Dockerfile
           push: true
-          tags: ghcr.io/kiracore/sekin:${{ env.NAME }}_${{ env.VERSION }}
+          tags: ghcr.io/mrlutik/sekin:${{ env.NAME }}_${{ env.VERSION }}
 
