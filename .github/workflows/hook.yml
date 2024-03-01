@@ -5,9 +5,37 @@ on:
     types: [release_merged]
 
 jobs:
-  my_job:
+  Print_version:
     runs-on: ubuntu-20.04
     steps:
-      - name: Run a script
-        run: echo "This workflow was triggered by a repository_dispatch event with release version ${{ github.event.client_payload.version }}."
+      - name: Extract repository release name 
+        id: name-extract
+        run: echo "NAME=${{ github.event.client_payload.name }}" >> $GITHUB_ENV
+      
+      - name: Extract repository release version 
+        id: version-extract
+        run: echo "VERSION=${{ github.event.client_payload.version }}" >> $GITHUB_ENV
+
+      - name: Debug info
+        run: |
+          echo "VERSION ${{ env.VERSION }}"
+          echo "NAME ${{ env.NAME }}"
+
+      - name: Checkout
+        uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 #v4.1.1
+
+      - name: Log in GHCR
+        uses: docker/login-action@343f7c4344506bcbf9b4de18042ae17996df046d #v3.0.0
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.TOKEN }}
+      
+      - name: Build and push Docker iamge
+        uses: docker/build-push-action@4a13e500e55cf31b7a5d59a38ab2040ab0f42f56 #v5.2.1
+        with:
+          context: .
+          file: ./${{ env.NAME }}.Dockerfile
+          push: true
+          tags: ghcr.io/${{ github.repository }}/${{ env.NAME }}:${{ env.VERSION }}
 
