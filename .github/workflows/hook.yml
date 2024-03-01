@@ -2,7 +2,7 @@ name: Repository Dispatch
 
 on:
   repository_dispatch:
-    types: [custom_event_type]
+    types: [released_merged]
 
 jobs:
   my_job:
