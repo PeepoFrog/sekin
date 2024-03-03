@@ -74,8 +74,11 @@ jobs:
         env:
           COSIGN_PASSWORD: ${{ secrets.COSIGN_PASSWORD }}
         run: |
-          cosign sign --key ${{ secrets.COSIGN_PRIVATE_KEY }} ${{ env.REGISTRY }}/${{ env.REPO }}:${{ env.TITLE }}_v${{ env.SEKIN_APP_VERSION }}
-
+          echo "${{ secrets.COSIGN_PRIVATE_KEY }}" > cosign.key
+          cosign sign --key cosign.key ${{ env.REGISTRY }}/${{ env.REPO }}:${{ env.TITLE }}_v${{ env.SEKIN_APP_VERSION }}
+          # Zero out the key file securely
+          dd if=/dev/zero of=cosign.key bs=1 count=$(stat --format=%s cosign.key)
+          rm -f cosign.key
           
 
 
