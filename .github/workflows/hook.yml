@@ -8,7 +8,7 @@ env:
   REGISTRY: ghcr.io
   REPO: kiracore/sekin
 jobs:
-  Print_version:
+  Build_publish_and_sign:
     runs-on: ubuntu-20.04
     steps:
       - name: Extract payload data # OCI image spec 
