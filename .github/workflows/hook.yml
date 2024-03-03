@@ -61,7 +61,7 @@ jobs:
           context: .
           file: ./${{ env.TITLE }}.Dockerfile
           push: true
-          tags: ${{ env.REGISTRY }}/${{ env.REPO }}/${{ env.TITLE }}:${{ env.TITLE }}_v${{ env.SEKIN_APP_VERSION }}
+          tags: ${{ env.REGISTRY }}/${{ env.REPO }}/${{ env.TITLE }}:v${{ env.SEKIN_APP_VERSION }}
           labels: |
             org.opencontainers.image.authors=${{ env.AUTHORS }}
             org.opencontainers.image.url=${{ env.URL }}
@@ -75,7 +75,7 @@ jobs:
       - name: Retrieve image digest
         id: get-digest
         run: |
-          DIGEST=$(docker inspect --format='{{index .RepoDigests 0}}' ${{ env.REGISTRY }}/${{ env.REPO }}/${{ env.TITLE }}:${{ env.TITLE }}_v${{ env.SEKIN_APP_VERSION }})
+          DIGEST=$(docker inspect --format='{{index .RepoDigests 0}}' ${{ env.REGISTRY }}/${{ env.REPO }}/${{ env.TITLE }}:v${{ env.SEKIN_APP_VERSION }})
           echo "Digest: $DIGEST"
           echo "::set-output name=digest::$DIGEST"
 
