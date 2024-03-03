@@ -36,7 +36,7 @@ jobs:
           echo "             DESC: ${{ env.DESC }}"
 
       - name: Install cosign
-        uses: sigstore/cosign-installer@493e6e29e2ac830aaf05ec210b36d0a5a60c3b32 #v2.2.3
+        uses: sigstore/cosign-installer@e1523de7571e31dbe865fd2e80c5c7c23ae71eb4 #v3.4.0
         with:
          cosign-release: 'v2.2.3'
           
