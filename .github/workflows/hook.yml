@@ -23,7 +23,10 @@ jobs:
           echo "LICENSES=${{ github.event.client_payload.licenses }}" >> $GITHUB_ENV
           echo "TITLE=${{ github.event.client_payload.title }}" >> $GITHUB_ENV
           echo "DESC=${{ github.event.client_payload.description }}" >> $GITHUB_ENV
-          
+          # Set package name
+          PACKAGE_NAME="${{ env.TITLE }}"
+          echo "$PACKAGE_NAME" >> $GITHUB_ENV
+
       - name: Debug info
         run: |
           echo "SEKIN_APP_VERSION: ${{ env.SEKIN_APP_VERSION }}"
@@ -59,7 +62,7 @@ jobs:
           context: .
           file: ./${{ env.TITLE }}.Dockerfile
           push: true
-          tags: ${{ env.REGISTRY }}/${{ env.REPO }}:${{ env.TITLE }}_v${{ env.SEKIN_APP_VERSION }}
+          tags: ${{ env.REGISTRY }}/${{ env.REPO }}/${{ env.PACKAGE_NAME }}:${{ env.TITLE }}_v${{ env.SEKIN_APP_VERSION }}
           labels: |
             org.opencontainers.image.authors=${{ env.AUTHORS }}
             org.opencontainers.image.url=${{ env.URL }}
@@ -73,7 +76,7 @@ jobs:
       - name: Retrieve image digest
         id: get-digest
         run: |
-          DIGEST=$(docker inspect --format='{{index .RepoDigests 0}}' ${{ env.REGISTRY }}/${{ env.REPO }}:${{ env.TITLE }}_v${{ env.SEKIN_APP_VERSION }})
+          DIGEST=$(docker inspect --format='{{index .RepoDigests 0}}' ${{ env.REGISTRY }}/${{ env.REPO }}/${{ env.PAPCKAGE_NAME }}:${{ env.TITLE }}_v${{ env.SEKIN_APP_VERSION }})
           echo "Digest: $DIGEST"
           echo "::set-output name=digest::$DIGEST"
 
