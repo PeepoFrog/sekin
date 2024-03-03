@@ -17,9 +17,9 @@ RUN wget https://go.dev/dl/go1.22.0.linux-amd64.tar.gz -O /tmp/go.tar.gz && \
 ENV PATH="$PATH:/usr/local/go/bin"
 
 # Cloning sekai repo and install
-RUN git clone -c http.postBuffer=1048576000 --depth 1 https://github.com/mrlutik/sekai.git /bsekai && \
+RUN git clone -c http.postBuffer=1048576000 --depth 1 https://github.com/kiracore/sekai.git /bsekai && \
     cd /bsekai && \
-    make install 
+    make build-static 
 
 FROM golang:1.22 AS caller-builder
 
