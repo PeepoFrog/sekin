@@ -51,7 +51,7 @@ jobs:
         with:
           registry: ${{ env.REGISTRY }}
           username: ${{ github.actor }}
-          password: ${{ secrets.REPO_ACCESS }}
+          password: ${{ secrets.GITHUB_TOKEN }}
       
       - name: Build and push Docker image
         uses: docker/build-push-action@4a13e500e55cf31b7a5d59a38ab2040ab0f42f56 #v5.2.1
@@ -59,7 +59,7 @@ jobs:
           context: .
           file: ./${{ env.TITLE }}.Dockerfile
           push: true
-          tags: ${{ env.REGISTRY }}/${{ env.REPO }}:${{ env.TITLE }}_${{ env.SEKIN_APP_VERSION }}
+          tags: ${{ env.REGISTRY }}/${{ env.REPO }}:${{ env.TITLE }}_v${{ env.SEKIN_APP_VERSION }}
           labels: |
             org.opencontainers.image.authors=${{ env.AUTHORS }}
             org.opencontainers.image.url=${{ env.URL }}
