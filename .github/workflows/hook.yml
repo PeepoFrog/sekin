@@ -70,17 +70,23 @@ jobs:
             org.opencontainers.image.title=${{ env.TITLE }}
             org.opencontainers.image.description=${{ env.DESC }}
 
-      - name: Sign published Docker image
+      - name: Retrieve image digest
+        id: get-digest
+        run: |
+          DIGEST=$(docker inspect --format='{{index .RepoDigests 0}}' ${{ env.REGISTRY }}/${{ env.REPO }}:${{ env.TITLE }}_v${{ env.SEKIN_APP_VERSION }})
+          echo "Digest: $DIGEST"
+          echo "::set-output name=digest::$DIGEST"
+
+      # Updated signing step to use the retrieved digest
+      - name: Sign published Docker image with digest
         env:
           COSIGN_PASSWORD: ${{ secrets.COSIGN_PASSWORD }}
         run: |
           echo "${{ secrets.COSIGN_PRIVATE_KEY }}" > cosign.key
-          cosign sign --key cosign.key ${{ env.REGISTRY }}/${{ env.REPO }}:${{ env.TITLE }}_v${{ env.SEKIN_APP_VERSION }}
+          cosign sign --key cosign.key ${{ steps.get-digest.outputs.digest }} --yes
           # Zero out the key file securely
           dd if=/dev/zero of=cosign.key bs=1 count=$(stat --format=%s cosign.key)
           rm -f cosign.key
-          
-
 
 
 
