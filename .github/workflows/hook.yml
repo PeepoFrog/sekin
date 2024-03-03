@@ -74,7 +74,7 @@ jobs:
         env:
           COSIGN_PASSWORD: ${{ secrets.COSIGN_PASSWORD }}
         run: |
-          cosign sign --key ${{ secrets.COSIGN_PRIVATE_KEY }} ${{ env.REGISTRY }}/${{ env.REPO }}:${{ env.TITLE }}_${{ env.SEKIN_APP_VERSION }}
+          cosign sign --key ${{ secrets.COSIGN_PRIVATE_KEY }} ${{ env.REGISTRY }}/${{ env.REPO }}:${{ env.TITLE }}_v${{ env.SEKIN_APP_VERSION }}
 
           
 
