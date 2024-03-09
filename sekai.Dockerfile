@@ -27,7 +27,7 @@ WORKDIR /api
 
 COPY ./src/sCaller /api
 
-RUN go mod init scaller && go mod tidy && CGO_ENABLED=0 go build -a -tags netgo -installsuffix cgo -o /sekaidCaller ./cmd/main.go
+RUN go mod tidy && CGO_ENABLED=0 go build -a -tags netgo -installsuffix cgo -o /sekaidCaller ./cmd/main.go
 
 
 # Run app
