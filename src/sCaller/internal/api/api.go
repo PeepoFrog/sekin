@@ -18,6 +18,8 @@ func ExecuteCommandHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	log.Printf("DEBUG: ExecuteCommandHandler: request: %v", request)
+
 	mapping, exists := command.CommandMapping[request.Command]
 	if !exists {
 		http.Error(w, "Command not allowed", http.StatusForbidden)
@@ -25,13 +27,19 @@ func ExecuteCommandHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Decode the Args into the specific struct for this command
-	args := mapping.ArgsStruct
-	if err := json.Unmarshal(request.Args, &args); err != nil {
-		http.Error(w, "Invalid arguments for command", http.StatusBadRequest)
-		return
+	args := mapping.ArgsStruct()
+	log.Printf("DEBUG: ExecuteCommandHandler: after mapping args: %v", args)
+	// Only attempt to unmarshal if args are provided
+	if len(request.Args) > 0 {
+		log.Printf("DEBUG: ExecuteCommandHandler: if req not empty")
+		if err := json.Unmarshal(request.Args, args); err != nil {
+			http.Error(w, "Invalid arguments for command", http.StatusBadRequest)
+			return
+		}
 	}
 
 	// Execute the command
+
 	output, err := mapping.Handler(args)
 	if err != nil {
 		log.Printf("Error executing command '%s': %v", request.Command, err)
