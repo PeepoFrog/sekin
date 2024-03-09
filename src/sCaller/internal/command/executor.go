@@ -20,3 +20,21 @@ func SekaiVersionCmd(args interface{}) (string, error) {
 	output, err := cmd.CombinedOutput()
 	return string(output), err
 }
+
+func SekaidKeysAddCmd(args interface{}) (string, error) {
+	cmdArgs, ok := args.(SekaidKeysAdd)
+	if !ok {
+		return "", fmt.Errorf("invalid arguments for 'init'")
+	}
+
+	cmd := exec.Command(ExecPath, "keys", "add", cmdArgs.KeyName,
+		"--keyring-backend", cmdArgs.KeyringBackend,
+		fmt.Sprintf("--recover=%v", cmdArgs.Recover),
+		"--home", cmdArgs.Home,
+		"--log_format", cmdArgs.LogFmt,
+		"--log-level", cmdArgs.LogLvl,
+	)
+
+	output, err := cmd.CombinedOutput()
+	return string(output), err
+}
