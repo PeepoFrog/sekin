@@ -23,10 +23,10 @@ func SekaiInitCmd(args interface{}) (string, error) {
 func SekaiVersionCmd(args interface{}) (string, error) {
 	cmd := exec.Command(ExecPath, "version")
 	output, err := cmd.CombinedOutput()
+
 	return string(output), err
 }
 
-<<<<<<< HEAD
 func SekaidKeysAddCmd(args interface{}) (string, error) {
 	cmdArgs, ok := args.(SekaidKeysAdd)
 	if !ok {
@@ -40,8 +40,14 @@ func SekaidKeysAddCmd(args interface{}) (string, error) {
 		"--log_format", cmdArgs.LogFmt,
 		"--log-level", cmdArgs.LogLvl,
 	)
+	if cmdArgs.Trace != "" {
+		cmd.Args = append(cmd.Args, "--trace")
+	}
+	output, err := cmd.CombinedOutput()
 
-=======
+	return string(output), err
+}
+
 func SekaiAddGenesisAccCmd(args interface{}) (string, error) {
 	cmdArgs, ok := args.(SekaiAddGenesisAcc)
 	if !ok {
@@ -52,19 +58,21 @@ func SekaiAddGenesisAccCmd(args interface{}) (string, error) {
 		cmd.Args = append(cmd.Args, "--trace")
 	}
 	output, err := cmd.CombinedOutput()
+
 	return string(output), err
 }
 
 func SekaiGentxClaimCmd(args interface{}) (string, error) {
 	cmdArgs, ok := args.(SekaiGentxClaim)
 	if !ok {
+
 		return "", fmt.Errorf("invalid arguments for 'gentx-claim'")
 	}
 	cmd := exec.Command(ExecPath, "gentx-claim", cmdArgs.Address, "--keyring-backend", cmdArgs.Keyring, "--moniker", cmdArgs.Moniker, "--pubkey", cmdArgs.PubKey, "--home", cmdArgs.Home, "--log_format", cmdArgs.LogFmt, "--log-level", cmdArgs.LogLvl)
 	if cmdArgs.Trace {
 		cmd.Args = append(cmd.Args, "--trace")
 	}
->>>>>>> 6ff97d6 (feat(rest_api) Add add-genesis-account, gentx-claim)
 	output, err := cmd.CombinedOutput()
+
 	return string(output), err
 }

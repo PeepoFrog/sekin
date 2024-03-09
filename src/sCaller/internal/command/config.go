@@ -28,7 +28,6 @@ type SekaiInit struct {
 	Trace  string `json:"trace,omitempty"`
 }
 
-<<<<<<< HEAD
 type SekaidKeysAdd struct {
 	KeyName        string `json:"key-name"`
 	KeyringBackend string `json:"keyring-backend"`
@@ -39,7 +38,8 @@ type SekaidKeysAdd struct {
 	LogLvl string `json:"log_level,omitempty"`
 	Trace  string `json:"trace,omitempty"`
 	Output string `json:"output,omitempty"`
-=======
+}
+
 type SekaiAddGenesisAcc struct {
 	Address string   `json:"address"` // Key can be used instead of address
 	Coins   []string `json:"coins"`
@@ -60,5 +60,4 @@ type SekaiGentxClaim struct {
 	LogFmt  string `json:"log_format,omitempty"`
 	LogLvl  string `json:"log_level,omitempty"`
 	Trace   bool   `json:"trace,omitempty"`
->>>>>>> 6ff97d6 (feat(rest_api) Add add-genesis-account, gentx-claim)
 }
