@@ -10,7 +10,11 @@ func SekaiInitCmd(args interface{}) (string, error) {
 	if !ok {
 		return "", fmt.Errorf("invalid arguments for 'init'")
 	}
-	cmd := exec.Command(ExecPath, "init", "--chain-id", cmdArgs.ChainID, "--overwrite", cmdArgs.Overwrite, "--log_format", cmdArgs.LogFmt, "--log-level", cmdArgs.LogLvl)
+	cmd := exec.Command(ExecPath, "init", "--chain-id", cmdArgs.ChainID,
+		fmt.Sprintf("--overwrite=%v", cmdArgs.Overwrite),
+		"--log_format", cmdArgs.LogFmt,
+		"--log-level", cmdArgs.LogLvl,
+	)
 	output, err := cmd.CombinedOutput()
 	return string(output), err
 }
