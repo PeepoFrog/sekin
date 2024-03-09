@@ -2,9 +2,9 @@ package api
 
 import (
 	"encoding/json"
+	"icaller/internal/command"
 	"log"
 	"net/http"
-	"scaller/internal/command"
 )
 
 func ExecuteCommandHandler(w http.ResponseWriter, r *http.Request) {
@@ -42,11 +42,11 @@ func ExecuteCommandHandler(w http.ResponseWriter, r *http.Request) {
 
 	output, err := mapping.Handler(args)
 	if err != nil {
-		log.Printf("Error executing command '%s': %v", request.Command, err)
+		log.Printf("Error executing command '%s': %v, out:%s", request.Command, err, string(output))
 		http.Error(w, "Failed to execute command", http.StatusInternalServerError)
 		return
 	}
-	log.Printf("Command '%s' executed successfully", request.Command)
+	log.Printf("Command '%s' executed successfully. Out: %s", request.Command, string(output))
 	w.WriteHeader(http.StatusOK)
 	json.NewEncoder(w).Encode(map[string]string{"output": output})
 }
