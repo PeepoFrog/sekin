@@ -23,11 +23,11 @@ RUN git clone -c http.postBuffer=1048576000 --depth 1 https://github.com/mrlutik
 
 FROM golang:1.22 AS caller-builder
 
-COPY ./src/sCaller ./sCaller
+WORKDIR /api
 
-WORKDIR ./sCaller
+COPY ./src/sCaller /api
 
-RUN go mod tidy && CGO_ENABLED=0 go build -a -tags netgo -installsuffix cgo -o /sekaidCaller .
+RUN go mod init scaller && go mod tidy && CGO_ENABLED=0 go build -a -tags netgo -installsuffix cgo -o /sekaidCaller ./cmd/main.go
 
 
 # Run app
