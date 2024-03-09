@@ -17,10 +17,23 @@ type SekaiVersion struct {
 
 type SekaiInit struct {
 	ChainID   string `json:"chain-id"`
-	Overwrite string `json:"overwrite"`
+	Overwrite bool   `json:"overwrite"`
+	Moniker   string `json:"moniker"`
 	// Global flags:
 	Home   string `json:"home"`
 	LogFmt string `json:"log_format,omitempty"`
 	LogLvl string `json:"log_level,omitempty"`
 	Trace  string `json:"trace,omitempty"`
+}
+
+type SekaidKeysAdd struct {
+	KeyName        string `json:"key-name"`
+	KeyringBackend string `json:"keyring-backend"`
+	Recover        bool   `json:"recover"`
+	// Global flags:
+	Home   string `json:"home"`
+	LogFmt string `json:"log_format,omitempty"`
+	LogLvl string `json:"log_level,omitempty"`
+	Trace  string `json:"trace,omitempty"`
+	Output string `json:"output,omitempty"`
 }
