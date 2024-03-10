@@ -2,6 +2,7 @@ package command
 
 import (
 	"fmt"
+	"log"
 	"os/exec"
 )
 
@@ -10,39 +11,52 @@ func InterxInitCmd(args interface{}) (string, error) {
 	if !ok {
 		return ``, fmt.Errorf("invalid arguments for 'init', error converting args to InterxInit struct\n Args:%v", args)
 	}
-	cmd := exec.Command(ExecPath, `init`,
-		fmt.Sprintf(`--addrbook=%v`, cmdArgs.AddrBook),
-		fmt.Sprintf(`--cache_dir=%v`, cmdArgs.CacheDir),
-		fmt.Sprintf(`--caching_duration=%v`, cmdArgs.CachingDuration),
-		fmt.Sprintf(`--download_file_size_limitation=%v`, cmdArgs.DownloadFileSizeLimitation),
-		fmt.Sprintf(`--faucet_amounts=%v`, cmdArgs.FaucetAmounts),
-		fmt.Sprintf(`--faucet_minimum_amounts=%v`, cmdArgs.FaucetMinimumAmounts),
-		fmt.Sprintf(`--faucet_mnemonic=%v`, cmdArgs.FaucetMnemonic),
-		fmt.Sprintf(`--faucet_time_limit=%v`, cmdArgs.FaucetTimeLimit),
-		fmt.Sprintf(`--fee_amounts=%v`, cmdArgs.FeeAmounts),
-		fmt.Sprintf(`--grpc=%v`, cmdArgs.Grpc),
-		fmt.Sprintf(`--halted_avg_block_times=%v`, cmdArgs.HaltedAvgBlockTimes),
-		fmt.Sprintf(`--home=%v`, cmdArgs.Home),
-		fmt.Sprintf(`--max_cache_size=%v`, cmdArgs.MaxCacheSize),
-		fmt.Sprintf(`--node_discovery_interx_port=%v`, cmdArgs.NodeDiscoveryInterxPort),
-		fmt.Sprintf(`--node_discovery_tendermint_port=%v`, cmdArgs.NodeDiscoveryTendermintPort),
-		fmt.Sprintf(`--node_discovery_timeout=%v`, cmdArgs.NodeDiscoveryTimeout),
-		fmt.Sprintf(`--node_discovery_use_https=%v`, cmdArgs.NodeDiscoveryUseHttps),
-		fmt.Sprintf(`--node_key=%v`, cmdArgs.NodeKey),
-		fmt.Sprintf(`--node_type=%v`, cmdArgs.NodeType),
-		fmt.Sprintf(`--port=%v`, cmdArgs.Port),
-		fmt.Sprintf(`--rpc=%v`, cmdArgs.Rpc),
-		fmt.Sprintf(`--seed_node_id=%v`, cmdArgs.SeedNodeID),
-		fmt.Sprintf(`--sentry_node_id=%v`, cmdArgs.SentryNodeID),
-		fmt.Sprintf(`--serve_https=%v`, cmdArgs.ServeHttps),
-		fmt.Sprintf(`--signing_mnemonic=%v`, cmdArgs.SigningMnemonic),
-		fmt.Sprintf(`--snapshot_interval=%v`, cmdArgs.SnapshotInterval),
-		fmt.Sprintf(`--snapshot_node_id=%v`, cmdArgs.SnapshotNodeID),
-		fmt.Sprintf(`--status_sync=%v`, cmdArgs.StatusSync),
-		fmt.Sprintf(`--tx_modes=%v`, cmdArgs.TxModes),
-		fmt.Sprintf(`--validator_node_id=%v`, cmdArgs.ValidatorNodeID),
-	)
-	fmt.Println(cmd)
+
+	cmdMap := make(map[string]interface{})
+	cmdMap["addrbook"] = cmdArgs.AddrBook
+	cmdMap["cache_dir"] = cmdArgs.CacheDir
+	cmdMap["caching_duration"] = cmdArgs.CachingDuration
+	cmdMap["download_file_size_limitation"] = cmdArgs.DownloadFileSizeLimitation
+	cmdMap["faucet_amounts"] = cmdArgs.FaucetAmounts
+	cmdMap["faucet_minimum_amounts"] = cmdArgs.FaucetMinimumAmounts
+	cmdMap["faucet_mnemonic"] = cmdArgs.FaucetMnemonic
+	cmdMap["faucet_time_limit"] = cmdArgs.FaucetTimeLimit
+	cmdMap["fee_amounts"] = cmdArgs.FeeAmounts
+	cmdMap["grpc"] = cmdArgs.Grpc
+	cmdMap["halted_avg_block_times"] = cmdArgs.HaltedAvgBlockTimes
+	cmdMap["home"] = cmdArgs.Home
+	cmdMap["max_cache_size"] = cmdArgs.MaxCacheSize
+	cmdMap["node_discovery_interx_port"] = cmdArgs.NodeDiscoveryInterxPort
+	cmdMap["node_discovery_tendermint_port"] = cmdArgs.NodeDiscoveryTendermintPort
+	cmdMap["node_discovery_timeout"] = cmdArgs.NodeDiscoveryTimeout
+	cmdMap["node_discovery_use_https"] = cmdArgs.NodeDiscoveryUseHttps
+	cmdMap["node_key"] = cmdArgs.NodeKey
+	cmdMap["node_type"] = cmdArgs.NodeType
+	cmdMap["port"] = cmdArgs.Port
+	cmdMap["rpc"] = cmdArgs.Rpc
+	cmdMap["seed_node_id"] = cmdArgs.SeedNodeID
+	cmdMap["sentry_node_id"] = cmdArgs.SentryNodeID
+	cmdMap["serve_https"] = cmdArgs.ServeHttps
+	cmdMap["signing_mnemonic"] = cmdArgs.SigningMnemonic
+	cmdMap["snapshot_interval"] = cmdArgs.SnapshotInterval
+	cmdMap["snapshot_node_id"] = cmdArgs.SnapshotNodeID
+	cmdMap["status_sync"] = cmdArgs.StatusSync
+	cmdMap["tx_modes"] = cmdArgs.TxModes
+	cmdMap["validator_node_id"] = cmdArgs.ValidatorNodeID
+
+	var flagsStr []string = []string{"init"}
+	// flagsStr = append(flagsStr, "init")
+	for k, v := range cmdMap {
+		if v != nil && v != "" {
+			flagsStr = append(flagsStr, fmt.Sprintf("--%v=%v", k, v))
+		} else {
+			log.Printf("DEBUG: <%v> was not added with <%v> value\n", k, v)
+		}
+	}
+
+	cmd := exec.Command(ExecPath, flagsStr...)
+
+	log.Printf("DEBUG: formed cmd: %+v", cmd.Args)
 	output, err := cmd.CombinedOutput()
 	return string(output), err
 }
