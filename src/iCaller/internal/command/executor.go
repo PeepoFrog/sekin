@@ -46,7 +46,6 @@ func InterxInitCmd(args interface{}) (string, error) {
 	cmdMap["validator_node_id"] = cmdArgs.ValidatorNodeID
 
 	var flagsStr []string = []string{"init"}
-	flagsStr = append(flagsStr, "init")
 	for k, v := range cmdMap {
 		if !checkNilInterface(v) && v != "" {
 			flagsStr = append(flagsStr, fmt.Sprintf("--%v=%v", k, reflect.Indirect(reflect.ValueOf(v))))
