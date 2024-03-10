@@ -23,9 +23,11 @@ RUN git clone -c http.postBuffer=1048576000 --depth 1 https://github.com/mrlutik
 
 FROM golang:1.22 AS caller-builder
 
-COPY . .
+WORKDIR /api
 
-RUN CGO_ENABLED=0 go build -a -tags netgo -installsuffix cgo -o /interxdCaller ./src/iCaller/interxdCaller.go
+COPY ./src/iCaller /api
+
+RUN go mod tidy && CGO_ENABLED=0 go build -a -tags netgo -installsuffix cgo -o /interxdCaller ./cmd/main.go
 
 
 # Run app
