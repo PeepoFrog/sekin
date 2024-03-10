@@ -1,5 +1,5 @@
 # Build app
-FROM ubuntu:20.04 AS sekai-builder
+FROM ubuntu:20.04 AS interx-builder
 
 # Avoid prompts from apt
 ARG DEBIAN_FRONTEND=noninteractive
@@ -17,9 +17,9 @@ RUN wget https://go.dev/dl/go1.22.0.linux-amd64.tar.gz -O /tmp/go.tar.gz && \
 ENV PATH="$PATH:/usr/local/go/bin"
 
 # Cloning sekai repo and install
-RUN git clone -c http.postBuffer=1048576000 --depth 1 https://github.com/mrlutik/interx.git /binterx && \
+RUN git clone -c http.postBuffer=1048576000 --depth 1 https://github.com/kiracore/interx.git /binterx && \
     cd /binterx && \
-    make install 
+    make build-static 
 
 FROM golang:1.22 AS caller-builder
 
@@ -37,12 +37,12 @@ FROM scratch
 ARG DEBIAN_FRONTEND=noninteractive
 
 # Copy artifacts
-COPY --from=sekai-builder /interxd /interxd
+COPY --from=interx-builder /interxd /interxd
 COPY --from=caller-builder /interxdCaller /interxdCaller 
 
 # Start interx
 ENTRYPOINT ["/interxdCaller"]
 
 # Expose the default Tendermint port
-EXPOSE 26657
-EXPOSE 26656
+EXPOSE 8081
+EXPOSE 11000
