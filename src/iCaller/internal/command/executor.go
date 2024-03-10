@@ -3,8 +3,10 @@ package command
 import (
 	"fmt"
 	"log"
+	"os"
 	"os/exec"
 	"reflect"
+	"syscall"
 )
 
 func InterxInitCmd(args interface{}) (string, error) {
@@ -79,4 +81,22 @@ func InterxVersionCmd(args interface{}) (string, error) {
 	output, err := cmd.CombinedOutput()
 
 	return string(output), err
+}
+
+func InterxStartCmd(args interface{}) (string, error) {
+	fmt.Println("interxStart")
+	cmdArgs, ok := args.(*InterxStart)
+	if !ok {
+		return ``, fmt.Errorf("invalid arguments for 'start', error converting args to InterxStart struct\n Args:%v", args)
+	}
+	var err error
+	env := os.Environ()
+	if homePath := cmdArgs.Home; homePath != "" {
+		log.Printf("DEBUG: starting interxd with <%v> home folder\n", homePath)
+		err = syscall.Exec(ExecPath, []string{"", "start", "--home", homePath}, env)
+	} else {
+		log.Printf("DEBUG: home folder is empty or not mentioned, starting interxd with default path\n")
+		err = syscall.Exec(ExecPath, []string{"", "start"}, env)
+	}
+	return "", err
 }

@@ -1,9 +1,8 @@
 ---
 services:
   sekaid_rpc:
-    build:
-      context: ./
-      dockerfile: sekai.Dockerfile
+    image:
+      - ghcr.io/kiracore/sekin/sekai:v0.3.42
     volumes:
       - ./sekai:/sekai
     ports:
@@ -18,9 +17,8 @@ services:
     hostname: sekai.local
 
   interxd_rpc:
-    build:
-      context: ./
-      dockerfile: interx.Dockerfile
+    image:
+      - ghcr.io/kiracore/sekin/interx:v0.4.48
     volumes:
       - ./interx:/interx
     ports:
