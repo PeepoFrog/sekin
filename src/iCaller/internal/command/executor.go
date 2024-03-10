@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log"
 	"os/exec"
+	"reflect"
 )
 
 func InterxInitCmd(args interface{}) (string, error) {
@@ -45,10 +46,10 @@ func InterxInitCmd(args interface{}) (string, error) {
 	cmdMap["validator_node_id"] = cmdArgs.ValidatorNodeID
 
 	var flagsStr []string = []string{"init"}
-	// flagsStr = append(flagsStr, "init")
+	flagsStr = append(flagsStr, "init")
 	for k, v := range cmdMap {
-		if v != nil && v != "" {
-			flagsStr = append(flagsStr, fmt.Sprintf("--%v=%v", k, v))
+		if !checkNilInterface(v) && v != "" {
+			flagsStr = append(flagsStr, fmt.Sprintf("--%v=%v", k, reflect.Indirect(reflect.ValueOf(v))))
 		} else {
 			log.Printf("DEBUG: <%v> was not added with <%v> value\n", k, v)
 		}
@@ -59,6 +60,19 @@ func InterxInitCmd(args interface{}) (string, error) {
 	log.Printf("DEBUG: formed cmd: %+v", cmd.Args)
 	output, err := cmd.CombinedOutput()
 	return string(output), err
+}
+
+func checkNilInterface(i interface{}) bool {
+	iv := reflect.ValueOf(i)
+	if !iv.IsValid() {
+		return true
+	}
+	switch iv.Kind() {
+	case reflect.Ptr, reflect.Slice, reflect.Map, reflect.Func, reflect.Interface:
+		return iv.IsNil()
+	default:
+		return false
+	}
 }
 
 func InterxVersionCmd(args interface{}) (string, error) {
