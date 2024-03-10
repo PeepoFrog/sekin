@@ -1,6 +1,6 @@
 package command
 
-const ExecPath = "/interx"
+const ExecPath = "/interxd"
 
 var CommandMapping = map[string]struct {
 	ArgsStruct func() interface{}

@@ -9,7 +9,7 @@ import (
 )
 
 func main() {
-	logFilePath := filepath.Join("/interxLogs", "icaller.log")
+	logFilePath := filepath.Join("/interx", "icaller.log")
 
 	logFile, err := os.OpenFile(logFilePath, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0666)
 	if err != nil {
