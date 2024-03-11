@@ -8,6 +8,7 @@ var CommandMapping = map[string]struct {
 }{
 	"init":    {ArgsStruct: func() interface{} { return &InterxInit{} }, Handler: InterxInitCmd},
 	"version": {ArgsStruct: func() interface{} { return &InterxVersion{} }, Handler: InterxVersionCmd},
+	"start":   {ArgsStruct: func() interface{} { return &InterxStart{} }, Handler: InterxStartCmd},
 }
 
 type Handler func(interface{}) (string, error)
