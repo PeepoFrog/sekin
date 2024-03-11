@@ -14,6 +14,10 @@ type Handler func(interface{}) (string, error)
 type InterxVersion struct {
 }
 
+type InterxStart struct {
+	Home string `json:"home,omitempty"`
+}
+
 type InterxInit struct {
 	AddrBook                    *string `json:"addrbook,omitempty"`
 	CacheDir                    *string `json:"cache_dir,omitempty"`
