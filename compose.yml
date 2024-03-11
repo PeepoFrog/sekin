@@ -16,7 +16,7 @@ services:
     hostname: sekai.local
 
   interxd_rpc:
-    image: ghcr.io/kiracore/sekin/interx:v0.4.47
+    image: ghcr.io/kiracore/sekin/interx:v0.4.48
     volumes:
       - ./interx:/interx
     ports:
