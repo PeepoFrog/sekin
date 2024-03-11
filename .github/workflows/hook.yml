@@ -1,3 +1,4 @@
+---
 name: Repository Dispatch
 
 on:
@@ -11,7 +12,7 @@ jobs:
   Build_publish_and_sign:
     runs-on: ubuntu-20.04
     steps:
-      - name: Extract payload data # OCI image spec 
+      - name: Extract payload data # OCI image spec
         id: payload-extract
         run: |
           echo "SEKIN_APP_VERSION=${{ github.event.client_payload.version }}" >> $GITHUB_ENV
@@ -23,9 +24,7 @@ jobs:
           echo "LICENSES=${{ github.event.client_payload.licenses }}" >> $GITHUB_ENV
           echo "TITLE=${{ github.event.client_payload.title }}" >> $GITHUB_ENV
           echo "DESC=${{ github.event.client_payload.description }}" >> $GITHUB_ENV
-       
-     
-
+          
       - name: Debug info
         run: |
           echo "SEKIN_APP_VERSION: ${{ env.SEKIN_APP_VERSION }}"
@@ -40,8 +39,8 @@ jobs:
       - name: Install cosign
         uses: sigstore/cosign-installer@e1523de7571e31dbe865fd2e80c5c7c23ae71eb4 #v3.4.0
         with:
-         cosign-release: 'v2.2.3'
-          
+          cosign-release: 'v2.2.3'
+
       - name: Confirm cosign installation
         run: cosign version
 
@@ -54,7 +53,7 @@ jobs:
           registry: ${{ env.REGISTRY }}
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
-      
+
       - name: Build and push Docker image
         uses: docker/build-push-action@4a13e500e55cf31b7a5d59a38ab2040ab0f42f56 #v5.2.1
         with:
@@ -90,6 +89,14 @@ jobs:
           dd if=/dev/zero of=cosign.key bs=1 count=$(stat --format=%s cosign.key)
           rm -f cosign.key
 
-
-
-
+      - name: Update image version in compose.yml
+        run: |
+          sed -i "s/${{ env.TITLE }}:v[0-9]*\.[0-9]*\.[0-9]*/${{ env.TITLE }}:v${{ env.SEKIN_APP_VERSION }}/g" compose.yml
+      - name: Commit and push updated compose.yml
+        run: |
+          git config --global user.email "actions@github.com"
+          git config --global user.name "GitHub Actions"
+          git add compose.yml
+          git commit -m "feat(cidi_auto):Update compose.yml" \
+                     -m "* Update image ${{ env.TITLE }} with newer version v${{ env.SEKIN_APP_VERSION }}"
+          git push

@@ -2,49 +2,51 @@
 ## Overview
 This repository, Sekin, serves as a CI/CD hub, specifically automating the Docker image creation for the "Sekai" and "Interx" repositories. It leverages GitHub Actions to build and push Docker images to a Docker registry whenever changes are pushed to the relevant project directories.
 
-## Sekai
+### Building
 
-To pull the image, execute:
+1. Prepare your host with `./scripts/bootstrap.sh` script:
+
 ```bash
-docker pull ghcr.io/kiracore/sekin/sekai:v0.3.42
+chmod +x ./scripts/*
 ```
 
-To initialize Sekai before starting the server, you can run:
+2. Run the script. It will install all the dependencies:
 ```bash
-docker run --rm -it -v $(pwd)/sekai:/sekai ghcr.io/kiracore/sekin/sekai:v0.3.42 init --overwrite --chain-id=testnet-1 "KIRA TEST LOCAL VALIDATOR NODE" --home=/sekai
+./scripts/bootstrap.sh
 ```
 
-To add a genesis account:
+3. To run both Sekai and Interx we can use compose file. Run the command:
+
 ```bash
-docker run -it --rm -v $(pwd)/sekai:/sekai $DOCKER_IMAGE keys add genesis --keyring-backend=test --home=/sekai --output=json
+docker compose build
+docker compose up
 ```
 
-To add a validator account:
+Apart from using compose we can build Sekai and Interx independently using Docker. 
+
+1. Make scripts executable running command from above.
+
+2. To build the Sekai image run:
+
 ```bash
-docker run -it --rm -v $(pwd)/sekai:/sekai $DOCKER_IMAGE add-genesis-account validator 300000ukex --keyring-backend=test --home=/sekai
+./scripts/docker-sekaid-build.sh v0.0.1
 ```
 
-To add a genesis account to the genesis file:
+3. To build the Interx image run:
+
 ```bash
-docker run -it --rm -v $(pwd)/sekai:/sekai $DOCKER_IMAGE add-genesis-account genesis 300000000000000ukex --keyring-backend=test --home=/sekai
+./scripts/docker-interxd-build.sh v0.0.1
 ```
 
-To add a validator account to the genesis file:
+4. To run the Sekai container:
+
 ```bash
-docker run -it --rm -v $(pwd)/sekai:/sekai $DOCKER_IMAGE add-genesis-account validator 300000ukex --keyring-backend=test --home=/sekai
+./scripts/docker-sekaid-run.sh v0.0.1
+```
+5. To run the Interx container:
+
+```bash
+./scripts/docker-interxd-run.sh v0.0.1
 ```
 
-To initialize the genesis validator:
-```bash
-docker run -it --rm -v $(pwd)/sekai:/sekai $DOCKER_IMAGE gentx-claim genesis --keyring-backend=test --moniker="GENESIS VALIDATOR" --home=/sekai
-```
 
-To start the sekai node:
-```bash
-docker run -d -v $(pwd)/sekai:/sekai -p 26657:26657 -p 26656:26656 -p 26660:26660 --name sekai --restart always $DOCKER_IMAGE start --home=/sekai --rpc.laddr "tcp://0.0.0.0:26657"
-```
-
-To execute commands on a running Sekai node:
-```bash
-docker exec sekai /sekaid
-```

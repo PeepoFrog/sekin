@@ -1,0 +1,37 @@
+---
+services:
+  sekaid_rpc:
+    image: ghcr.io/kiracore/sekin/sekai:v0.3.42
+    volumes:
+      - ./sekai:/sekai
+    ports:
+      - "26658:26658"           # ABCI
+      - "26657:26657"           # RPC
+      - "26656:26656"           # P2P (gRPC)
+      - "26660:26660"           # Prometheus
+      - "8080:8080"             # RPC scaller
+
+    networks:
+      - kiranet
+    hostname: sekai.local
+
+  interxd_rpc:
+    image: ghcr.io/kiracore/sekin/interx:v0.4.48
+    volumes:
+      - ./interx:/interx
+    ports:
+      - "11000:11000"
+      - "8081:8081"
+    networks:
+      - kiranet
+    hostname: interx.local
+
+networks:
+  kiranet:
+    name: kiranet
+    driver: bridge
+    ipam:
+      driver: default
+      config:
+        - subnet: 10.1.0.0/16
+          gateway: 10.1.0.1
