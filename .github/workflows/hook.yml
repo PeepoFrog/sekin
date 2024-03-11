@@ -24,6 +24,7 @@ jobs:
           echo "LICENSES=${{ github.event.client_payload.licenses }}" >> $GITHUB_ENV
           echo "TITLE=${{ github.event.client_payload.title }}" >> $GITHUB_ENV
           echo "DESC=${{ github.event.client_payload.description }}" >> $GITHUB_ENV
+          
       - name: Debug info
         run: |
           echo "SEKIN_APP_VERSION: ${{ env.SEKIN_APP_VERSION }}"
@@ -34,10 +35,12 @@ jobs:
           echo "         LICENSES: ${{ env.LICENSES }}"
           echo "            TITLE: ${{ env.TITLE }}"
           echo "             DESC: ${{ env.DESC }}"
+
       - name: Install cosign
         uses: sigstore/cosign-installer@e1523de7571e31dbe865fd2e80c5c7c23ae71eb4 #v3.4.0
         with:
           cosign-release: 'v2.2.3'
+
       - name: Confirm cosign installation
         run: cosign version
 
@@ -50,6 +53,7 @@ jobs:
           registry: ${{ env.REGISTRY }}
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
+
       - name: Build and push Docker image
         uses: docker/build-push-action@4a13e500e55cf31b7a5d59a38ab2040ab0f42f56 #v5.2.1
         with:
@@ -84,6 +88,7 @@ jobs:
           # Zero out the key file securely
           dd if=/dev/zero of=cosign.key bs=1 count=$(stat --format=%s cosign.key)
           rm -f cosign.key
+
       - name: Update image version in compose.yml
         run: |
           sed -i "s/${{ env.TITLE }}:v[0-9]*\.[0-9]*\.[0-9]*/${{ env.TITLE }}:v${{ env.SEKIN_APP_VERSION }}/g" compose.yml

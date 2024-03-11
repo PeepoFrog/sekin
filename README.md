@@ -49,3 +49,4 @@ Apart from using compose we can build Sekai and Interx independently using Docke
 ./scripts/docker-interxd-run.sh v0.0.1
 ```
 
+
