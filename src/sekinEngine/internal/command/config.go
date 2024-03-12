@@ -13,6 +13,9 @@ type (
 	// 	Overwrite bool   `json:"overwrite"`
 	// }
 
+	InitNew struct {
+		Mnemonic string `json:"mnemonic"`
+	}
 )
 
 var CommandMapping = map[string]struct {
@@ -20,5 +23,5 @@ var CommandMapping = map[string]struct {
 	Handler    Handler
 }{
 	// example "init":                {ArgsStruct: func() interface{} { return &SekaiInit{} }, Handler: SekaiInitCmd},
-
+	"init-new": {ArgsStruct: func() interface{} { return &InitNew{} }, Handler: InitNewNetwork},
 }
