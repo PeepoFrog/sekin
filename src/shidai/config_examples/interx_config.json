@@ -1,0 +1,64 @@
+{
+  "moniker": "myNode",
+  "home": "/home/user/.sekaid",
+  "trace": false,
+  "log_format": "plain",
+  "log_level": "info",
+  "consensus": {
+    "create_empty_blocks": true,
+    "create_empty_blocks_interval": "0s",
+    "double_sign_check_height": 100
+  },
+  "grpc": {
+    "only": false,
+    "web_address": "0.0.0.0:9091",
+    "web_enable": true,
+    "address": "0.0.0.0:9090",
+    "enable": true
+  },
+  "p2p": {
+    "external_address": "tcp://1.2.3.4:26656",
+    "laddr": "tcp://0.0.0.0:26656",
+    "persistent_peers": "ID1@ip1:port1,ID2@ip2:port2",
+    "pex": true,
+    "private_peer_ids": "ID3,ID4",
+    "seed_mode": false,
+    "seeds": "ID5@ip5:port5,ID6@ip6:port6",
+    "unconditional_peer_ids": "ID7,ID8",
+    "upnp": false
+  },
+  "pruning": {
+    "strategy": "default",
+    "interval": 50,
+    "keep_every": 100,
+    "keep_recent": 50
+  },
+  "rpc": {
+    "grpc_laddr": "0.0.0.0:9090",
+    "laddr": "tcp://127.0.0.1:26657",
+    "pprof_laddr": "localhost:6060",
+    "unsafe": false
+  },
+  "state_sync": {
+    "snapshot_interval": 500,
+    "snapshot_keep_recent": 2
+  },
+  "database": {
+    "db_backend": "goleveldb",
+    "db_dir": "data"
+  },
+  "abci": {
+    "abci_chain_id": "test-chain",
+    "abci_address": "tcp://0.0.0.0:26658"
+  },
+  "cpu_profile": "",
+  "genesis_hash": "abc123",
+  "min_retain_blocks": 0,
+  "minimum_gas_prices": "0.025umuon",
+  "unsafe_skip_upgrades": [1000, 2000],
+  "priv_validator_laddr": "",
+  "proxy_app": "kvstore",
+  "transport": "socket",
+  "x_crisis_skip_assert_invariants": false
+}
+
