@@ -25,7 +25,18 @@ services:
     networks:
       - kiranet
     hostname: interx.local
-
+  shidai:
+    build:
+      context: ./
+      dockerfile: shidai.Dockerfile
+    ports:
+      - "8282:8282"
+    volumes:
+      - ./sekai:/sekai
+      - ./interx:/interx
+    networks:
+      - kiranet
+    hostname: shidai.local
 networks:
   kiranet:
     name: kiranet
