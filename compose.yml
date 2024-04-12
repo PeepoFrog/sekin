@@ -1,7 +1,7 @@
 ---
 services:
   sekaid_rpc:
-    image: ghcr.io/kiracore/sekin/sekai:v0.3.43
+    image: ghcr.io/kiracore/sekin/sekai:v0.3.44
     volumes:
       - ./sekai:/sekai
     ports:
