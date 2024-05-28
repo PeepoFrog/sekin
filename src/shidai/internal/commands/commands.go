@@ -1,0 +1,87 @@
+package commands
+
+import (
+	"fmt"
+	"net/http"
+
+	"github.com/kiracore/sekin/src/shidai/internal/types"
+	"github.com/kiracore/sekin/src/shidai/internal/utils"
+	"go.uber.org/zap"
+
+	"github.com/gin-gonic/gin"
+)
+
+// CommandRequest defines the structure for incoming command requests
+type CommandRequest struct {
+	Command string                 `json:"command"`
+	Args    map[string]interface{} `json:"args"`
+}
+
+// CommandResponse represents the response structure
+type CommandResponse struct {
+	Status  string `json:"status"`
+	Message string `json:"message"`
+}
+
+// HandlerFunc is a function type for command handlers
+type HandlerFunc func(map[string]interface{}) (string, error)
+
+// CommandHandlers maps command strings to handler functions
+var CommandHandlers = map[string]HandlerFunc{
+	"join":   handleJoinCommand,
+	"status": handleStatusCommand,
+}
+
+// ExecuteCommandHandler handles incoming commands and directs them to the correct function
+func ExecuteCommandHandler(c *gin.Context) {
+	zap.L().Info("Received a request to execute a command")
+	var req CommandRequest
+	if err := c.BindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, CommandResponse{Status: "error", Message: "Invalid request"})
+		return
+	}
+
+	if handler, ok := CommandHandlers[req.Command]; ok {
+		response, err := handler(req.Args)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, CommandResponse{Status: "error", Message: err.Error()})
+			return
+		}
+		c.JSON(http.StatusOK, CommandResponse{Status: "success", Message: response})
+		return
+	}
+
+	c.JSON(http.StatusBadRequest, CommandResponse{Status: "error", Message: fmt.Sprintf("Unknown command: %s", req.Command)})
+}
+
+// [COMMANDS] //
+
+// handleJoinCommand processes the "join" command
+func handleJoinCommand(args map[string]interface{}) (string, error) {
+	// Unmarshal arguments to a specific struct if needed or handle them as a map
+	zap.L().Info("handling join request")
+	ip, ok := args["ip"].(string)
+	if !utils.ValidateIP(ip) || !ok {
+		return "", types.ErrInvalidOrMissingIP
+	}
+
+	m, ok := args["mnemonic"].(string)
+	if !utils.ValidateMnemonic(m) || !ok {
+		return "", types.ErrInvalidOrMissingMnemonic
+	}
+
+	// Example of using the IP, and similar for other fields
+	// This function would contain the logic specific to handling a join command
+	return fmt.Sprintf("Join command processed for IP: %s", ip), nil
+}
+
+func handleStatusCommand(args map[string]interface{}) (string, error) {
+	zap.L().Info("handling status request")
+	// TODO:
+	// 1. Return publicIP
+	// 2. Return validatorAddress
+	// 3. Return validatorStatus
+	// 4. Return missChance
+
+	return "", nil
+}
