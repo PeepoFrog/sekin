@@ -216,9 +216,9 @@ type (
 )
 
 const (
-	ShidaiLogPath = "/syslog-data/syslog-ng/logs/10.1.0.1_shidai.log"
-	SekaiLogPath  = "/syslog-data/syslog-ng/logs/10.1.0.1_sekai.log"
-	InterxLogPath = "/syslog-data/syslog-ng/logs/10.1.0.1_interx.log"
+	ShidaiLogPath = "/syslog-data/syslog-ng/logs/shidai.log"
+	SekaiLogPath  = "/syslog-data/syslog-ng/logs/sekai.log"
+	InterxLogPath = "/syslog-data/syslog-ng/logs/interx.log"
 
 	InvalidOrMissingMnemonic  = "invalid or missing mnemonic"
 	InvalidOrMissingIP        = "invalid or missing IP"
