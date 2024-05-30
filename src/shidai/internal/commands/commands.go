@@ -1,9 +1,14 @@
 package commands
 
 import (
+	"context"
 	"fmt"
 	"net/http"
+	"strconv"
 
+	mnemonicmanager "github.com/kiracore/sekin/src/shidai/internal/mnemonic_manager"
+	sekaihandler "github.com/kiracore/sekin/src/shidai/internal/sekai_handler"
+	configconstructor "github.com/kiracore/sekin/src/shidai/internal/sekai_handler/config_constructor"
 	"github.com/kiracore/sekin/src/shidai/internal/types"
 	"github.com/kiracore/sekin/src/shidai/internal/utils"
 	"go.uber.org/zap"
@@ -68,6 +73,35 @@ func handleJoinCommand(args map[string]interface{}) (string, error) {
 	m, ok := args["mnemonic"].(string)
 	if !utils.ValidateMnemonic(m) || !ok {
 		return "", types.ErrInvalidOrMissingMnemonic
+	}
+	masterMnemonic, err := mnemonicmanager.GenerateMnemonicsFromMaster(m)
+	if err != nil {
+		return "", err
+	}
+
+	ctx := context.Background()
+
+	p2p, ok := args["p2p_port"].(float64)
+	if !utils.ValidatePort(int(p2p)) || !ok {
+		return "", types.ErrInvalidOrMissingP2PPort
+	}
+	rpc, ok := args["rpc_port"].(float64)
+	if !utils.ValidatePort(int(rpc)) || !ok {
+		return "", types.ErrInvalidOrMissingRPCPort
+	}
+	interx, ok := args["interx_port"].(float64)
+	if !utils.ValidatePort(int(interx)) || !ok {
+		return "", types.ErrInvalidOrMissingInterxPort
+	}
+
+	tc := configconstructor.TargetSeedKiraConfig{IpAddress: ip, InterxPort: strconv.Itoa(int(interx)), SekaidRPCPort: strconv.Itoa(int(rpc)), SekaidP2PPort: strconv.Itoa(int(p2p))}
+	err = sekaihandler.InitSekaiJoiner(ctx, &tc, masterMnemonic)
+	if err != nil {
+		return "", err
+	}
+	err = sekaihandler.StartSekai()
+	if err != nil {
+		return "", fmt.Errorf("unable to start sekai: %w", err)
 	}
 
 	// Example of using the IP, and similar for other fields

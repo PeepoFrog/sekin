@@ -225,6 +225,10 @@ const (
 	NoPublicIPAddresses       = "no public IP addresses found"
 	MultiplePublicIPAddresses = "multiple public IP address found"
 
+	InvalidOrMissingP2PPort    = "invalid or missing P2P port"
+	InvalidOrMissingRPCPort    = "invalid or missing RPC port"
+	InvalidOrMissingInterxPort = "invalid or missing interx port"
+
 	FilePermRO os.FileMode = 0444
 	FilePermRW os.FileMode = 0644
 	FilePermEX os.FileMode = 0755
@@ -236,6 +240,10 @@ const (
 var (
 	ErrInvalidOrMissingMnemonic = errors.New(InvalidOrMissingMnemonic)
 	ErrInvalidOrMissingIP       = errors.New(InvalidOrMissingIP)
+
+	ErrInvalidOrMissingP2PPort    = errors.New(InvalidOrMissingP2PPort)
+	ErrInvalidOrMissingRPCPort    = errors.New(InvalidOrMissingRPCPort)
+	ErrInvalidOrMissingInterxPort = errors.New(InvalidOrMissingInterxPort)
 
 	ErrNoPublicIPAddresses       = errors.New(NoPublicIPAddresses)
 	ErrMultiplePublicIPAddresses = errors.New(MultiplePublicIPAddresses)
