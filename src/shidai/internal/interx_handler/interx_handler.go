@@ -5,16 +5,17 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"log"
 
 	mnemonicsgenerator "github.com/KiraCore/tools/validator-key-gen/MnemonicsGenerator"
 
 	httpexecutor "github.com/kiracore/sekin/src/shidai/internal/http_executor"
+	"github.com/kiracore/sekin/src/shidai/internal/logger"
 	"github.com/kiracore/sekin/src/shidai/internal/types"
 )
 
-func InitInterx(ctx context.Context, masterMnemonicSet *mnemonicsgenerator.MasterMnemonicSet) error {
+var log = logger.GetLogger()
 
+func InitInterx(ctx context.Context, masterMnemonicSet *mnemonicsgenerator.MasterMnemonicSet) error {
 	signerMnemonic := string(masterMnemonicSet.SignerAddrMnemonic)
 	nodeType := "validator"
 
@@ -37,7 +38,7 @@ func InitInterx(ctx context.Context, masterMnemonicSet *mnemonicsgenerator.Maste
 	if err != nil {
 		return fmt.Errorf("unable execute <%v> request, error: %w", cmd, err)
 	}
-	log.Println(string(out))
+	log.Info(string(out))
 
 	return nil
 }
@@ -52,7 +53,7 @@ func StartInterx() error {
 	_, err := httpexecutor.ExecuteCallerCommand(types.INTERX_CONTAINER_ADDRESS, "8081", "POST", cmd)
 	if err != nil {
 		if errors.Is(err, io.EOF) {
-			log.Println("DEBUG: interx started")
+			log.Debug("interx started")
 		} else {
 			return fmt.Errorf("unable execute <%v> request, error: %w", cmd, err)
 		}

@@ -200,12 +200,18 @@ func SetField(obj interface{}, fieldName string, newValue interface{}) (string, 
 }
 
 func CheckInfra(infra types.InfraFiles) bool {
+	var check bool = false
 	for _, path := range infra {
 		if !FileExists(path) {
 			log.Warn("Infrastructure file not found", zap.String("path", path))
-			return false
+			check = false
 		}
 	}
-	log.Info("All infrastructure files are present")
-	return true
+	if check {
+		log.Info("All infrastructure files are present")
+	} else {
+		log.Info("Not all infrastructure files are present")
+	}
+
+	return true && check
 }

@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"log"
 	"net/http"
 	"path"
 	"strconv"
@@ -15,10 +14,15 @@ import (
 
 	"github.com/KiraCore/kensho/helper/networkparser"
 	httpexecutor "github.com/kiracore/sekin/src/shidai/internal/http_executor"
+	"github.com/kiracore/sekin/src/shidai/internal/logger"
 	"github.com/kiracore/sekin/src/shidai/internal/types"
 	"github.com/kiracore/sekin/src/shidai/internal/types/endpoints/sekai"
 	"github.com/kiracore/sekin/src/shidai/internal/utils"
 	"go.uber.org/zap"
+)
+
+var (
+	log = logger.GetLogger()
 )
 
 const (
@@ -75,7 +79,7 @@ func FormSekaiJoinerConfigs(tc *TargetSeedKiraConfig) error {
 		return err
 	}
 	configToml.P2P.ExternalAddress = fmt.Sprintf("tcp://%v:%v", pubIP, types.DEFAULT_P2P_PORT)
-	log.Printf("%+v", configToml)
+	log.Info(fmt.Sprintf("%+v", configToml))
 
 	configTomlSavePath := path.Join(types.SEKAI_HOME, "config", "config.toml")
 
@@ -129,7 +133,7 @@ func retrieveNetworkInformation(ctx context.Context, tc *TargetSeedKiraConfig) (
 					if s == ss {
 						exist = true
 						// zap.L().Debug("already exist", zap.String("IP", ss))
-						log.Println("already exist", zap.String("IP", ss))
+						log.Info("already exist", zap.String("IP", ss))
 						break
 					}
 				}

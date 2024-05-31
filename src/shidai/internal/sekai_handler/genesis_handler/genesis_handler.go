@@ -8,11 +8,11 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"log"
 	"net/http"
 	"strings"
 
 	httpexecutor "github.com/kiracore/sekin/src/shidai/internal/http_executor"
+	"github.com/kiracore/sekin/src/shidai/internal/logger"
 )
 
 type ResponseChunkedGenesis struct {
@@ -29,10 +29,12 @@ type ResponseCheckSum struct {
 var (
 	ErrFilesContentNotIdentical = errors.New("files content are not identical")
 	ErrSHA256ChecksumMismatch   = errors.New("sha256 checksum is not the same")
+
+	log = logger.GetLogger()
 )
 
 func GetVerifiedGenesisFile(ctx context.Context, ip, sekaidRPCPort, interxPort string) ([]byte, error) {
-	log.Println("Getting verified genesis file")
+	log.Info("Getting verified genesis file")
 
 	genesisSekaid, err := getSekaidGenesis(ctx, ip, sekaidRPCPort)
 	if err != nil {
@@ -57,7 +59,7 @@ func GetVerifiedGenesisFile(ctx context.Context, ip, sekaidRPCPort, interxPort s
 // getSekaidGenesis retrieves the complete Sekaid Genesis data from a target Sekaid node
 // by fetching the data in chunks using the Sekaid RPC API.
 func getSekaidGenesis(ctx context.Context, ipAddress, sekaidRPCport string) ([]byte, error) {
-	log.Println("getting sekaid genesis")
+	log.Info("getting sekaid genesis")
 	var completeGenesis []byte
 	var chunkCount int64
 	client := &http.Client{}
@@ -97,7 +99,7 @@ func getSekaidGenesis(ctx context.Context, ipAddress, sekaidRPCport string) ([]b
 }
 
 func getInterxGenesis(ctx context.Context, ipAddress, interxPort string) ([]byte, error) {
-	log.Println("getting interx genesis")
+	log.Info("getting interx genesis")
 
 	url := fmt.Sprintf("http://%s:%s/%s", ipAddress, interxPort, "api/genesis")
 	client := &http.Client{}
@@ -110,7 +112,7 @@ func getInterxGenesis(ctx context.Context, ipAddress, interxPort string) ([]byte
 }
 
 func checkFileContentGenesisFiles(genesis1, genesis2 []byte) error {
-	log.Println("checking file content")
+	log.Info("checking file content")
 
 	if string(genesis1) != string(genesis2) {
 		return ErrFilesContentNotIdentical
@@ -121,7 +123,7 @@ func checkFileContentGenesisFiles(genesis1, genesis2 []byte) error {
 
 // checkGenSum checks the integrity of a Genesis file using its SHA256 checksum.
 func checkGenSum(ctx context.Context, genesis []byte, IpAddress, InterxPort string) error {
-	log.Println("checking gen sum")
+	log.Info("checking gen sum")
 
 	genesisSum, err := getGenSum(ctx, IpAddress, InterxPort)
 	if err != nil {
@@ -141,7 +143,7 @@ func checkGenSum(ctx context.Context, genesis []byte, IpAddress, InterxPort stri
 // getGenSum retrieves the Genesis Sum from a target Interx server
 // and returns it as a string after trimming the prefix "0x".
 func getGenSum(ctx context.Context, ipAddress, interxPort string) (string, error) {
-	log.Println("Getting gen sum")
+	log.Info("Getting gen sum")
 
 	const genSumPrefix = "0x"
 	url := fmt.Sprintf("http://%s:%s/%s", ipAddress, interxPort, "api/gensum")

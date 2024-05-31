@@ -2,7 +2,6 @@ package utils
 
 import (
 	"fmt"
-	"log"
 	"os"
 
 	"github.com/cosmos/cosmos-sdk/codec"
@@ -11,6 +10,7 @@ import (
 	"github.com/cosmos/cosmos-sdk/crypto/keyring"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/go-bip39"
+	"go.uber.org/zap"
 )
 
 func AddKeyToKeyring(keyName, mnemonic, homeFolder, keyringType string) (*keyring.Record, error) {
@@ -21,7 +21,7 @@ func AddKeyToKeyring(keyName, mnemonic, homeFolder, keyringType string) (*keyrin
 	if !check {
 		return nil, fmt.Errorf("mnemonic is not valid <%v>", mnemonic)
 	}
-	log.Printf("DEBUG: received mnemonic is valid: %v", mnemonic)
+	log.Debug("received mnemonic is valid: ", zap.String("mnemonic", mnemonic))
 
 	if keyringType == "" {
 		keyringType = keyring.BackendOS // setting up default value for keyring = "os" check AddKeyringFlags() from sekai
@@ -46,7 +46,7 @@ func AddKeyToKeyring(keyName, mnemonic, homeFolder, keyringType string) (*keyrin
 	var index uint32 = 0
 	algoStr := string(hd.Secp256k1Type)
 	keyringAlgos, _ := kb.SupportedAlgorithms()
-	log.Printf("DEBUG: default values for algo string: %v, %v, %v, %v, %v", coinType, account, index, algoStr, keyringAlgos)
+	log.Debug(fmt.Sprintf("default values for algo string: %v, %v, %v, %v, %v", coinType, account, index, algoStr, keyringAlgos))
 
 	algo, err := keyring.NewSigningAlgoFromString(algoStr, keyringAlgos)
 	if err != nil {
@@ -54,7 +54,7 @@ func AddKeyToKeyring(keyName, mnemonic, homeFolder, keyringType string) (*keyrin
 	}
 
 	hdPath := hd.CreateHDPath(coinType, account, index).String()
-	log.Printf("DEBUG: hdPath: %v", hdPath)
+	log.Debug(fmt.Sprintf("hdPath: %v", hdPath))
 
 	k, err := kb.NewAccount(keyName, mnemonic, "", hdPath, algo)
 	if err != nil {

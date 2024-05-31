@@ -5,11 +5,11 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"log"
 	"os"
 
 	mnemonicsgenerator "github.com/KiraCore/tools/validator-key-gen/MnemonicsGenerator"
 	httpexecutor "github.com/kiracore/sekin/src/shidai/internal/http_executor"
+	"github.com/kiracore/sekin/src/shidai/internal/logger"
 	mnemonicmanager "github.com/kiracore/sekin/src/shidai/internal/mnemonic_manager"
 
 	configconstructor "github.com/kiracore/sekin/src/shidai/internal/sekai_handler/config_constructor"
@@ -17,6 +17,8 @@ import (
 	"github.com/kiracore/sekin/src/shidai/internal/types"
 	"github.com/kiracore/sekin/src/shidai/internal/utils"
 )
+
+var log = logger.GetLogger()
 
 func InitSekaiJoiner(ctx context.Context, tc *configconstructor.TargetSeedKiraConfig, masterMnemonicSet *mnemonicsgenerator.MasterMnemonicSet) error {
 	cmd := httpexecutor.CommandRequest{
@@ -79,7 +81,7 @@ func StartSekai() error {
 	_, err := httpexecutor.ExecuteCallerCommand(types.SEKAI_CONTAINER_ADDRESS, "8080", "POST", cmd)
 	if err != nil {
 		if errors.Is(err, io.EOF) {
-			log.Println("DEBUG: sekai started")
+			log.Debug("sekai started")
 		} else {
 			return fmt.Errorf("unable execute <%v> request, error: %w", cmd, err)
 		}
