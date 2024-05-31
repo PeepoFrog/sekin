@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
 	"log"
 	"net/http"
 	"path"
@@ -69,12 +70,14 @@ func FormSekaiJoinerConfigs(tc *TargetSeedKiraConfig) error {
 	if err != nil {
 		return err
 	}
-
+	pubIP, err := GetPublicIP()
+	if err != nil {
+		return err
+	}
+	configToml.P2P.ExternalAddress = fmt.Sprintf("tcp://%v:%v", pubIP, types.DEFAULT_P2P_PORT)
 	log.Printf("%+v", configToml)
 
 	configTomlSavePath := path.Join(types.SEKAI_HOME, "config", "config.toml")
-
-	log.Printf("%v", configTomlSavePath)
 
 	err = utils.SaveConfig(configTomlSavePath, *configToml)
 	if err != nil {
@@ -355,4 +358,43 @@ func getBlockInfo(ctx context.Context, rpcServer string, blockHeight int) (*Resp
 	}
 
 	return response, nil
+}
+
+func GetPublicIP() (string, error) {
+	services := []string{
+		"http://ifconfig.me",
+		"http://api.ipify.org",
+		"http://checkip.amazonaws.com",
+	}
+
+	var ip string
+	var err error
+	for _, service := range services {
+		ip, err = fetchIP(service)
+		if err == nil {
+			return ip, nil
+		}
+	}
+
+	return "", fmt.Errorf("failed to get public IP from all services: %v", err)
+}
+
+// fetchIP retrieves the public IP address from a single service
+func fetchIP(url string) (string, error) {
+	resp, err := http.Get(url)
+	if err != nil {
+		return "", err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return "", fmt.Errorf("failed to get IP address from %s, status code: %d", url, resp.StatusCode)
+	}
+
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return "", err
+	}
+
+	return string(body), nil
 }
