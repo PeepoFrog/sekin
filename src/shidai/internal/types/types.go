@@ -6,6 +6,20 @@ import (
 )
 
 type (
+	InfraFiles map[string]string
+
+	AppInfo struct {
+		Version string `json:"version"`
+		Infra   bool   `json:"infra"`
+	}
+
+	StatusResponse struct {
+		Sekai  AppInfo `json:"sekai"`
+		Interx AppInfo `json:"interx"`
+		Shidai AppInfo `json:"shidai"`
+		Syslog AppInfo `json:"syslog-ng"`
+	}
+
 	Config struct {
 		ProxyApp               string                `toml:"proxy_app"`
 		Moniker                string                `toml:"moniker"`
@@ -247,6 +261,25 @@ var (
 
 	ErrNoPublicIPAddresses       = errors.New(NoPublicIPAddresses)
 	ErrMultiplePublicIPAddresses = errors.New(MultiplePublicIPAddresses)
+
+	SekaiFiles = InfraFiles{
+		"config.toml":        "/sekai/config/config.toml",
+		"app.toml":           "/sekai/config/app.toml",
+		"priv_validator_key": "/sekai/config/priv_validator_key.json",
+		"genesis.json":       "/sekai/config/genesis.json",
+		"client.toml":        "/sekai/config/client.toml",
+		"node_key.json":      "/sekai/config/node_key.json",
+	}
+
+	InterxFiles = InfraFiles{
+		"config.json": "/interx/config.json",
+	}
+
+	SyslogFiles = InfraFiles{
+		"shidai.log": "/syslog-data/syslog-ng/logs/shidai.log",
+		"sekai.log":  "/syslog-data/syslog-ng/logs/sekai.log",
+		"interx.log": "/syslog-data/syslog-ng/logs/interx.log",
+	}
 )
 
 func NewDefaultAppConfig() *AppConfig {

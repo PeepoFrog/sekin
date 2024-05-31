@@ -1,7 +1,1 @@
-
-curl -X POST "http://127.0.0.1:8282/api/execute" \
-     -H "Content-Type: application/json" \
-     -d '{
-            "command": "status",
-            "args": {}
-         }'
+curl -v -X GET "http://127.0.0.1:8282/statu

@@ -11,7 +11,6 @@ import (
 	configconstructor "github.com/kiracore/sekin/src/shidai/internal/sekai_handler/config_constructor"
 	"github.com/kiracore/sekin/src/shidai/internal/types"
 	"github.com/kiracore/sekin/src/shidai/internal/utils"
-	"go.uber.org/zap"
 
 	"github.com/gin-gonic/gin"
 )
@@ -39,7 +38,6 @@ var CommandHandlers = map[string]HandlerFunc{
 
 // ExecuteCommandHandler handles incoming commands and directs them to the correct function
 func ExecuteCommandHandler(c *gin.Context) {
-	zap.L().Info("Received a request to execute a command")
 	var req CommandRequest
 	if err := c.BindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, CommandResponse{Status: "error", Message: "Invalid request"})
@@ -64,7 +62,6 @@ func ExecuteCommandHandler(c *gin.Context) {
 // handleJoinCommand processes the "join" command
 func handleJoinCommand(args map[string]interface{}) (string, error) {
 	// Unmarshal arguments to a specific struct if needed or handle them as a map
-	zap.L().Info("handling join request")
 	ip, ok := args["ip"].(string)
 	if !utils.ValidateIP(ip) || !ok {
 		return "", types.ErrInvalidOrMissingIP
@@ -110,12 +107,12 @@ func handleJoinCommand(args map[string]interface{}) (string, error) {
 }
 
 func handleStatusCommand(args map[string]interface{}) (string, error) {
-	zap.L().Info("handling status request")
 	// TODO:
 	// 1. Return publicIP
 	// 2. Return validatorAddress
 	// 3. Return validatorStatus
 	// 4. Return missChance
+	// 5.
 
 	return "", nil
 }

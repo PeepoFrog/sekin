@@ -18,6 +18,6 @@ FROM scratch
 
 COPY --from=shidai-builder /shidai /shidai
 
-CMD ["/shidai"]
+CMD ["/shidai", "start"]
 
 EXPOSE 8282

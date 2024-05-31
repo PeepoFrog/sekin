@@ -8,16 +8,18 @@ import (
 	"regexp"
 
 	"github.com/BurntSushi/toml"
+	"github.com/kiracore/sekin/src/shidai/internal/logger"
 	"github.com/kiracore/sekin/src/shidai/internal/types"
 	"github.com/tyler-smith/go-bip39"
 	"go.uber.org/zap"
 )
 
+var log = logger.GetLogger()
+
 // ValidateIP checks if the given string is a valid IPv4 or IPv6 address.
 // It returns true if the IP is valid, otherwise returns false.
 func ValidateIP(ip string) bool {
 	isValid := net.ParseIP(ip) != nil
-	zap.L().Debug("Validating IP", zap.String("IP", ip), zap.Bool("IsValid", isValid))
 	return isValid
 }
 
@@ -25,7 +27,6 @@ func ValidateIP(ip string) bool {
 // It returns true if the port is valid, otherwise returns false.
 func ValidatePort(port int) bool {
 	isValid := port > 0 && port <= 65535
-	zap.L().Debug("Validating port", zap.Int("Port", port), zap.Bool("IsValid", isValid))
 	return isValid
 }
 
@@ -33,7 +34,6 @@ func ValidatePort(port int) bool {
 // It returns true if the mnemonic is valid, otherwise returns false.
 func ValidateMnemonic(mnemonic string) bool {
 	isValid := bip39.IsMnemonicValid(mnemonic)
-	zap.L().Debug("Validating mnemonic", zap.String("Mnemonic", mnemonic), zap.Bool("IsValid", isValid))
 	return isValid
 }
 
@@ -47,7 +47,6 @@ func IsPublicIP(ip net.IP) bool {
 	ipStr := ip.String()
 	for _, block := range privateIPBlocks {
 		if block.MatchString(ipStr) {
-			zap.L().Debug("IP identified as private", zap.String("IP", ipStr))
 			return false
 		}
 	}
@@ -60,7 +59,7 @@ func GetPublicIP() (string, error) {
 	var publicIPs []string
 	addrs, err := net.InterfaceAddrs()
 	if err != nil {
-		zap.L().Error("Failed to get interface addresses", zap.Error(err))
+		log.Error("failed toget interface addresses")
 		return "", fmt.Errorf("failed to get interface addresses: %w", err)
 	}
 
@@ -79,107 +78,94 @@ func GetPublicIP() (string, error) {
 	}
 
 	if len(publicIPs) == 0 {
-		zap.L().Error("No public IP addresses found")
+		log.Warn("no public IP addresses found")
 		return "", fmt.Errorf("no public IP addresses found")
 	}
 	if len(publicIPs) > 1 {
-		zap.L().Error("Multiple public IP addresses found")
+		log.Warn("multiple public IP addresses found")
 		return "", fmt.Errorf("multiple public IP addresses found")
 	}
 
-	zap.L().Info("Public IP address retrieved", zap.String("IP", publicIPs[0]))
 	return publicIPs[0], nil
 }
 
 func FileExists(filePath string) bool {
 	info, err := os.Stat(filePath)
 	if os.IsNotExist(err) {
-		zap.L().Debug("File does not exist", zap.String("filePath", filePath))
 		return false
 	}
 	isFile := !info.IsDir()
-	zap.L().Debug("File existence checked", zap.String("filePath", filePath), zap.Bool("Exists", isFile))
 	return isFile
 }
 
 // DeleteFile removes a file specified by the file path.
 func DeleteFile(filePath string) error {
-	// Log the attempt to delete the file
-	zap.L().Info("Attempting to delete file", zap.String("filePath", filePath))
-
+	log.Info("attempting to delete file", zap.String("path", filePath))
 	err := os.Remove(filePath)
 	if err != nil {
-		// Log the error if the file could not be deleted
-		zap.L().Error("Failed to delete file", zap.String("filePath", filePath), zap.Error(err))
+		log.Error("failed to delete fiel", zap.String("path", filePath))
 		return fmt.Errorf("failed to delete file %s: %w", filePath, err)
 	}
 
-	// Log successful deletion
-	zap.L().Info("File deleted successfully", zap.String("filePath", filePath))
+	log.Info("succefully deleted the file", zap.String("path", filePath))
 	return nil
 }
 
 func CreateDir(path string, perm os.FileMode) error {
-	return os.MkdirAll(path, perm)
+	log.Info("creating directory", zap.String("path", path))
+	err := os.MkdirAll(path, perm)
+	if err != nil {
+		log.Error("failed to create directory", zap.String("path", path), zap.Error(err))
+		return fmt.Errorf("failed to create a directory %s: %w", path, err)
+	}
+
+	log.Info("succefully created directory", zap.String("path", path))
+	return nil
 }
 
 // LoadConfig loads config.toml to Config structure
 func LoadConfig(filePath string, config types.Config) error {
-	zap.L().Info("Attempting to load configuration", zap.String("filePath", filePath))
 	if _, err := toml.DecodeFile(filePath, config); err != nil {
-		zap.L().Error("Failed to load config from file", zap.String("filePath", filePath), zap.Error(err))
 		return fmt.Errorf("failed to load config: %w", err)
 	}
-	zap.L().Info("Configuration loaded successfully", zap.String("filePath", filePath))
 	return nil
 }
 
 // LoadAppConfig loads app.toml to ConfigApp structure
 func LoadAppConfig(filePath string, config types.AppConfig) error {
-	zap.L().Info("Attempting to load app configuration", zap.String("filePath", filePath))
 	if _, err := toml.DecodeFile(filePath, config); err != nil {
-		zap.L().Error("Failed to load app config from file", zap.String("filePath", filePath), zap.Error(err))
 		return fmt.Errorf("failed to load app config: %w", err)
 	}
-	zap.L().Info("App configuration loaded successfully", zap.String("filePath", filePath))
 	return nil
 }
 
 // SaveConfig saves config.toml to given path
 func SaveConfig(filePath string, config types.Config) error {
-	zap.L().Info("Attempting to save configuration", zap.String("filePath", filePath))
 	file, err := os.Create(filePath)
 	if err != nil {
-		zap.L().Error("Failed to create config file", zap.String("filePath", filePath), zap.Error(err))
 		return fmt.Errorf("failed to create config file: %w", err)
 	}
 	defer file.Close()
 
 	encoder := toml.NewEncoder(file)
 	if err := encoder.Encode(config); err != nil {
-		zap.L().Error("Failed to encode configuration to file", zap.String("filePath", filePath), zap.Error(err))
 		return fmt.Errorf("failed to encode config: %w", err)
 	}
-	zap.L().Info("Configuration saved successfully", zap.String("filePath", filePath))
 	return nil
 }
 
 // SaveAppConfig saves app.toml to given path
 func SaveAppConfig(filePath string, config types.AppConfig) error {
-	zap.L().Info("Attempting to save app configuration", zap.String("filePath", filePath))
 	file, err := os.Create(filePath)
 	if err != nil {
-		zap.L().Error("Failed to create app config file", zap.String("filePath", filePath), zap.Error(err))
 		return fmt.Errorf("failed to create app config file: %w", err)
 	}
 	defer file.Close()
 
 	encoder := toml.NewEncoder(file)
 	if err := encoder.Encode(config); err != nil {
-		zap.L().Error("Failed to encode app configuration to file", zap.String("filePath", filePath), zap.Error(err))
 		return fmt.Errorf("failed to encode app config: %w", err)
 	}
-	zap.L().Info("App configuration saved successfully", zap.String("filePath", filePath))
 	return nil
 }
 
@@ -187,7 +173,6 @@ func SaveAppConfig(filePath string, config types.AppConfig) error {
 func SetField(obj interface{}, fieldName string, newValue interface{}) (string, error) {
 	v := reflect.ValueOf(obj)
 	if v.Kind() != reflect.Ptr || v.Elem().Kind() != reflect.Struct {
-		zap.L().Error("Invalid object type", zap.Any("Type", v.Type()))
 		return "", fmt.Errorf("expected a pointer to a struct")
 	}
 
@@ -195,20 +180,15 @@ func SetField(obj interface{}, fieldName string, newValue interface{}) (string, 
 
 	field := v.FieldByName(fieldName)
 	if !field.IsValid() {
-		zap.L().Error("No such field", zap.String("Field", fieldName))
 		return "", fmt.Errorf("no such field: %s in obj", fieldName)
 	}
 	if !field.CanSet() {
-		zap.L().Error("Cannot set field", zap.String("Field", fieldName))
 		return "", fmt.Errorf("cannot set field %s", fieldName)
 	}
 
 	fieldType := field.Type()
 	newVal := reflect.ValueOf(newValue)
 	if newVal.Type() != fieldType {
-		zap.L().Error("Type mismatch",
-			zap.String("Expected", fieldType.String()),
-			zap.String("Got", newVal.Type().String()))
 		return "", fmt.Errorf("provided value type %s doesn't match obj field type %s", newVal.Type(), fieldType)
 	}
 
@@ -216,7 +196,16 @@ func SetField(obj interface{}, fieldName string, newValue interface{}) (string, 
 	field.Set(newVal)
 	changeDescription := fmt.Sprintf("Changed %s from %s to %v", fieldName, oldValue, newValue)
 
-	zap.L().Info("Field updated", zap.String("Change", changeDescription))
-
 	return changeDescription, nil
+}
+
+func CheckInfra(infra types.InfraFiles) bool {
+	for _, path := range infra {
+		if !FileExists(path) {
+			log.Warn("Infrastructure file not found", zap.String("path", path))
+			return false
+		}
+	}
+	log.Info("All infrastructure files are present")
+	return true
 }
