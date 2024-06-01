@@ -1,34 +1,48 @@
 package logger
 
 import (
-	"fmt"
+	"log/syslog"
 	"os"
 
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 )
 
-var Log *zap.Logger
+var log *zap.Logger
 
-// InitLogger initializes the zap logger
-func InitLogger() {
-	config := zap.NewProductionConfig()
-	config.EncoderConfig.EncodeTime = zapcore.ISO8601TimeEncoder // Setting the time format
+func init() {
 
-	// Create a file to write logs
-	logFile, err := os.Create("shidai_logs.json")
+	// File path for backup logging
+	logFilePath := "/syslog-data/syslog-ng/logs/shidai_backup.log"
+
+	// Create the log file if it does not exist, or open it in append mode if it does
+	logFile, err := os.OpenFile(logFilePath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 	if err != nil {
-		panic(fmt.Sprintf("Failed to create log file: %v", err))
+		panic("Unable to create/open the log file: " + err.Error())
 	}
 
-	// Write logs to the file in JSON format
-	fileWriteSyncer := zapcore.AddSync(logFile)
-	core := zapcore.NewCore(
-		zapcore.NewJSONEncoder(config.EncoderConfig),
-		fileWriteSyncer,
-		config.Level,
-	)
+	// Setting up network syslog writer
+	syslogServer := "10.1.0.2:514" // Adjust as necessary
+	syslogWriter, err := syslog.Dial("udp", syslogServer, syslog.LOG_LOCAL0, "shidai")
+	if err != nil {
+		panic("Failed to dial syslog: " + err.Error())
+	}
 
-	Log = zap.New(core, zap.AddCaller(), zap.AddStacktrace(zapcore.ErrorLevel))
-	zap.ReplaceGlobals(Log) // Replace the global logger, which can be accessed with zap.L()
+	// Setting up encoders for each output
+	encoderConfig := zap.NewProductionEncoderConfig()
+	encoderConfig.EncodeTime = zapcore.ISO8601TimeEncoder
+	jsonEncoder := zapcore.NewJSONEncoder(encoderConfig)
+	plaintextEncoder := zapcore.NewConsoleEncoder(encoderConfig)
+
+	// Create cores for each output
+	fileCore := zapcore.NewCore(jsonEncoder, zapcore.AddSync(logFile), zap.NewAtomicLevelAt(zapcore.InfoLevel))
+	syslogCore := zapcore.NewCore(plaintextEncoder, zapcore.AddSync(syslogWriter), zap.NewAtomicLevelAt(zapcore.InfoLevel))
+
+	// Combine cores
+	combinedCore := zapcore.NewTee(fileCore, syslogCore)
+
+	// Create the logger with the combined cores
+	log = zap.New(combinedCore, zap.AddCaller(), zap.AddStacktrace(zapcore.ErrorLevel))
 }
+
+func GetLogger() *zap.Logger { return log }

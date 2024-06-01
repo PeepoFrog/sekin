@@ -4,6 +4,7 @@ services:
     depends_on:
       - syslog-ng
     image: ghcr.io/kiracore/sekin/sekai:v0.3.45
+    restart: always
     logging:
       driver: syslog
       options:
@@ -27,6 +28,7 @@ services:
     depends_on:
       - syslog-ng
     image: ghcr.io/kiracore/sekin/interx:v0.4.48
+    restart: always
     logging:
       driver: syslog
       options:
@@ -48,24 +50,23 @@ services:
     build:
       context: ./
       dockerfile: shidai.Dockerfile
-    logging:
-      driver: syslog
-      options:
-        syslog-address: "udp://10.1.0.2:514"
-        syslog-facility: local0
-        tag: "shidai"
+    restart: always
     ports:
       - "127.0.0.1:8282:8282"
     volumes:
       - ./sekai:/sekai
       - ./interx:/interx
       - ./syslog-data:/syslog-data
+      - /var/run/docker.sock:/var/run/docker.sock
     networks:
       - kiranet
     hostname: shidai.local
 
   syslog-ng:
-    image: linuxserver/syslog-ng
+    build:
+      context: ./
+      dockerfile: syslog-ng.Dockerfile
+    restart: always
     healthcheck:
       test: ["CMD", "pgrep", "syslog-ng"]
       interval: 10s
@@ -76,12 +77,10 @@ services:
       - PGID=1000  # Adjust GID for file permissions
     volumes:
       - ./config/syslog-ng.conf:/config/syslog-ng.conf:ro
-      - ./syslog-data:/run/syslog-ng
       - ./syslog-data:/var/log
     ports:
       - "514:514/udp"
       - "514:514"
-    restart: unless-stopped
     networks:
       kiranet:
         ipv4_address: 10.1.0.2
