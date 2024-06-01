@@ -63,7 +63,9 @@ services:
     hostname: shidai.local
 
   syslog-ng:
-    image: linuxserver/syslog-ng
+    build:
+      context: ./
+      dockerfile: syslog-ng.Dockerfile
     restart: always
     healthcheck:
       test: ["CMD", "pgrep", "syslog-ng"]
