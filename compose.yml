@@ -77,7 +77,6 @@ services:
       - PGID=1000  # Adjust GID for file permissions
     volumes:
       - ./config/syslog-ng.conf:/config/syslog-ng.conf:ro
-      - ./syslog-data:/run/syslog-ng
       - ./syslog-data:/var/log
     ports:
       - "514:514/udp"
