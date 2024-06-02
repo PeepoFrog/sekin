@@ -161,6 +161,8 @@ download_compose_and_change_owner(){
     local max_attempts=5
     local attempt=1
 
+    sudo -u km mkdir -p $SEKIN_DIR
+
     while [ $attempt -le $max_attempts ]; do
         echo "Attempt $attempt: Downloading compose.yml from ${COMPOSE_URL}..."
         curl -o "${COMPOSE_PATH}" "${COMPOSE_URL}"
