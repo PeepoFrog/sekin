@@ -126,6 +126,6 @@ jobs:
           git config --global user.name "GitHub Actions"
           git add compose.yml
           git commit -m "feat(cidi_auto): Update compose.yml" \
-                     -m "Update image versions to v${{ steps.create_tag.outputs.new_tag }}"
-          git tag -a v${{ steps.create_tag.outputs.new_tag }} -m "Update image versions to v${{ steps.create_tag.outputs.new_tag }}"
+                     -m "Update image versions to ${{ steps.create_tag.outputs.new_tag }}"
+          git tag -a v${{ steps.create_tag.outputs.new_tag }} -m "Update image versions to ${{ steps.create_tag.outputs.new_tag }}"
           git push
