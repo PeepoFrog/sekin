@@ -145,38 +145,13 @@ install_docker_compose() {
 }
 
 add_user_km() {
-    echo "Checking if user 'km' exists..."
-
-    # Check if the user 'km' exists
-    if id "km" &>/dev/null; then
-        echo "User 'km' already exists. No need to create."
-    else
         echo "Creating user 'km' with a home directory and bash as the default shell..."
-        # Attempt to create the user 'km'
-        if sudo useradd -m -s /bin/bash km; then
-            echo "User 'km' created successfully."
-        else
-            echo "Failed to create user 'km'.... Exiting..."
-            exit 1
-        fi
-    fi
+        sudo useradd -m -s /bin/bash km || :
 }
 
 add_km_to_docker_group() {
     echo "Adding user 'km' to the docker group..."
-
-    # Check if user 'km' is already in the docker group
-    if sudo groups km | grep -q "\bdocker\b"; then
-        echo "User 'km' is already in the docker group. No changes needed."
-    else
-        # Try to add user 'km' to the docker group
-        if sudo usermod -aG docker km; then
-            echo "User 'km' successfully added to the docker group."
-        else
-             echo "Failed to add user 'km' to the docker group... Exiting..."
-            exit 1
-        fi
-    fi
+    sudo usermod -aG docker km; then || :
 }
 
 
