@@ -117,14 +117,33 @@ create_ansible_runner() {
 }
 
 install_docker_compose() {
-    echo "Installing dcoker compose..."
+    echo "Installing Docker Compose..."
+
+    # Setting up the Docker config directory
     DOCKER_CONFIG=${DOCKER_CONFIG:-$HOME/.docker}
-    mkdir -p $DOCKER_CONFIG/cli-plugins
-    curl -SL "https://github.com/docker/compose/releases/download/$DOCKER_COMPOSE_VER/docker-compose-linux-$ARCHITECTURE" -o $DOCKER_CONFIG/cli-plugins/docker-compose
-    mv $DOCKER_CONFIG/cli-plugins/docker-compose /usr/local/bin
-    chmod 755 /usr/local/bin/docker-compose
-    echo "Installed $(docker-compose version)"
+    mkdir -p "$DOCKER_CONFIG/cli-plugins" || { echo "Failed to create directory: $DOCKER_CONFIG/cli-plugins"; exit 1; }
+
+    # Downloading Docker Compose
+    echo "Downloading Docker Compose version $DOCKER_COMPOSE_VER for $ARCHITECTURE..."
+    curl -SL "https://github.com/docker/compose/releases/download/$DOCKER_COMPOSE_VER/docker-compose-linux-$ARCHITECTURE" -o "$DOCKER_CONFIG/cli-plugins/docker-compose" || { echo "Download failed"; exit 1; }
+
+    # Moving Docker Compose to a system-wide directory (requires root privileges)
+    echo "Moving Docker Compose to /usr/local/bin..."
+    mv "$DOCKER_CONFIG/cli-plugins/docker-compose" /usr/local/bin || { echo "Move failed"; exit 1; }
+
+    # Making Docker Compose executable
+    echo "Setting execute permissions for Docker Compose..."
+    chmod 755 /usr/local/bin/docker-compose || { echo "Failed to set permissions"; exit 1; }
+
+    # Verifying installation
+    if docker-compose version; then
+        echo "Docker Compose installed successfully."
+    else
+        echo "Failed to verify Docker Compose installation."
+        exit 1
+    fi
 }
+
 add_user_km() {
     echo "Checking if user 'km' exists..."
 
@@ -231,6 +250,7 @@ main() {
     add_user_km
     add_km_to_docker_group
     # download_compose_and_change_owner
+    clone_repo_as_km
     run_docker_compose_as_km
 }
 
