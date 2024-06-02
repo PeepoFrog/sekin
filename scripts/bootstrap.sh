@@ -224,8 +224,8 @@ main() {
     install_docker_compose
     add_user_km
     add_km_to_docker_group
-    # download_compose_and_change_owner
-    clone_repo_as_km
+    download_compose_and_change_owner
+    # clone_repo_as_km
     run_docker_compose_as_km
 }
 
