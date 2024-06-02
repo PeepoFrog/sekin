@@ -117,8 +117,8 @@ jobs:
 
       - name: Update image version in compose.yml
         run: |
-          sed -i "s/syslog-ng:v[0-9]*\.[0-9]*\.[0-9]*/syslog-ng:v${{ steps.create_tag.outputs.new_tag }}/g" compose.yml
-          sed -i "s/shidai:v[0-9]*\.[0-9]*\.[0-9]*/shidai:v${{ steps.create_tag.outputs.new_tag }}/g" compose.yml
+          sed -i "s/syslog-ng:v[0-9]*\.[0-9]*\.[0-9]*/syslog-ng:${{ steps.create_tag.outputs.new_tag }}/g" compose.yml
+          sed -i "s/shidai:v[0-9]*\.[0-9]*\.[0-9]*/shidai:${{ steps.create_tag.outputs.new_tag }}/g" compose.yml
 
       - name: Commit and push updated compose.yml
         run: |
