@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"strconv"
 
+	interxhandler "github.com/kiracore/sekin/src/shidai/internal/interx_handler"
 	mnemonicmanager "github.com/kiracore/sekin/src/shidai/internal/mnemonic_manager"
 	sekaihandler "github.com/kiracore/sekin/src/shidai/internal/sekai_handler"
 	configconstructor "github.com/kiracore/sekin/src/shidai/internal/sekai_handler/config_constructor"
@@ -101,6 +102,14 @@ func handleJoinCommand(args map[string]interface{}) (string, error) {
 		return "", fmt.Errorf("unable to start sekai: %w", err)
 	}
 
+	err = interxhandler.InitInterx(ctx, masterMnemonic)
+	if err != nil {
+		return "", fmt.Errorf("unable to init interx: %w", err)
+	}
+	err = interxhandler.StartInterx()
+	if err != nil {
+		return "", fmt.Errorf("unable to start interx: %w", err)
+	}
 	// Example of using the IP, and similar for other fields
 	// This function would contain the logic specific to handling a join command
 	return fmt.Sprintf("Join command processed for IP: %s", ip), nil
