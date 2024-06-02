@@ -10,34 +10,30 @@ on:
       - closed
 
 jobs:
-  setup_release:
+  build_and_push:
     if: github.event.pull_request.merged == true
     runs-on: ubuntu-latest
     outputs:
       version: ${{ steps.semantic_release.outputs.version }}
     steps:
+
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
+      - name: Create and Push Tag
+        id: create_tag
+        uses: mathieudutour/github-tag-action@v6.2
         with:
-          node-version: '16'  # Adjust the version as necessary
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          release_branches: main
+          default_bump: minor
+          create_annotated_tag: true
 
-      - name: Install dependencies
-        run: npm install
-
-      - name: Run Semantic Release
-        id: semantic_release
-        run: npx semantic-release --dry-run
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-  build_and_push:
-    needs: setup_release
-    runs-on: ubuntu-latest
-    steps:
-
+      - name: Print the new tags
+        run: |
+          echo "TAG: ${{ steps.create_tag.outputs.new_tag }}"
+          VERSION=$(echo ${{ steps.create_tag.outputs.new_tag }} | sed 's/^v//')
+          echo "VERSION: $VERSION"
       - name: Install cosign
         uses: sigstore/cosign-installer@3
         with:
@@ -45,9 +41,6 @@ jobs:
 
       - name: Confirm cosign installation
         run: cosign version
-
-      - name: Checkout
-        uses: actions/checkout@4
 
       - name: Log in to Docker Registry
         uses: docker/login-action@v3
@@ -62,7 +55,7 @@ jobs:
           context: .
           file: ./shidai.Dockerfile
           push: true
-          tags: ghcr.io/sekin/shidai:v${{ needs.setup_release.outputs.version }}
+          tags: ghcr.io/sekin/shidai:v${{ steps.create_tag.outputs.new_tag }}
           labels:
             org.opencontainers.image.authors="kira.network"
             org.opencontainers.image.url="https://github.com/KiraCore/sekin"
@@ -76,7 +69,7 @@ jobs:
       - name: Retrieve SHIDAI image digest
         id: get-shidai-digest
         run: |
-          DIGEST=$(docker inspect --format='{{index .RepoDigests 0}}' ghcr.io/sekin/shidai:v${{ needs.setup_release.outputs.version }})
+          DIGEST=$(docker inspect --format='{{index .RepoDigests 0}}' ghcr.io/sekin/shidai:v${{ steps.create_tag.outputs.new_tag }})
           echo "Digest: $DIGEST"
           echo "::set-output name=digest::$DIGEST"
 
@@ -88,7 +81,6 @@ jobs:
           cosign sign --key cosign.key ${{ steps.get-shidai-digest.outputs.digest }} --yes
           dd if=/dev/zero of=cosign.key bs=1 count=$(stat --format=%s cosign.key)
           rm -f cosign.key
-           
 
       - name: Build and push SYSLOG-NG Docker image
         uses: docker/build-push-action@v5
@@ -96,7 +88,7 @@ jobs:
           context: .
           file: ./syslog-ng.Dockerfile
           push: true
-          tags: ghcr.io/sekin/syslog-ng:v${{ needs.setup_release.outputs.version }}
+          tags: ghcr.io/sekin/syslog-ng:v${{ steps.create_tag.outputs.new_tag }}
           labels:
             org.opencontainers.image.authors="kira.network"
             org.opencontainers.image.url="https://github.com/KiraCore/sekin"
@@ -110,7 +102,7 @@ jobs:
       - name: Retrieve SYSLOG-NG image digest
         id: get-syslog-digest
         run: |
-          DIGEST=$(docker inspect --format='{{index .RepoDigests 0}}' ghcr.io/sekin/syslog-ng:v${{ needs.setup_release.outputs.version }})
+          DIGEST=$(docker inspect --format='{{index .RepoDigests 0}}' ghcr.io/sekin/syslog-ng:v${{ steps.create_tag.outputs.new_tag }})
           echo "Digest: $DIGEST"
           echo "::set-output name=digest::$DIGEST"
 
@@ -125,8 +117,8 @@ jobs:
 
       - name: Update image version in compose.yml
         run: |
-          sed -i "s/syslog-ng:v[0-9]*\.[0-9]*\.[0-9]*/syslog-ng:v${{ needs.setup_release.outputs.version }}/g" compose.yml
-          sed -i "s/shidai:v[0-9]*\.[0-9]*\.[0-9]*/shidai:v${{ needs.setup_release.outputs.version }}/g" compose.yml
+          sed -i "s/syslog-ng:v[0-9]*\.[0-9]*\.[0-9]*/syslog-ng:v${{ steps.create_tag.outputs.new_tag }}/g" compose.yml
+          sed -i "s/shidai:v[0-9]*\.[0-9]*\.[0-9]*/shidai:v${{ steps.create_tag.outputs.new_tag }}/g" compose.yml
 
       - name: Commit and push updated compose.yml
         run: |
@@ -134,5 +126,6 @@ jobs:
           git config --global user.name "GitHub Actions"
           git add compose.yml
           git commit -m "feat(cidi_auto): Update compose.yml" \
-                     -m "Update image versions to v${{ needs.setup_release.outputs.version }}"
+                     -m "Update image versions to v${{ steps.create_tag.outputs.new_tag }}"
+          git tag -a v${{ steps.create_tag.outputs.new_tag }} -m "Update image versions to v${{ steps.create_tag.outputs.new_tag }}"
           git push
