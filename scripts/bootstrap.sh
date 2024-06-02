@@ -23,8 +23,9 @@ ANSIBLE_ENTRYPOINT="$ANSIBLE_DIR/entrypoint.sh"
 
 # HOST
 KM_DIR="/home/km"
+SEKIN_GIT="https://github.com/KiraCore/sekin.git"
 COMPOSE_URL="https://raw.githubusercontent.com/KiraCore/sekin/main/compose.yml"
-COMPOSE_PATH="/home/km/compose.yml"
+COMPOSE_PATH="/home/km/sekin/compose.yml"
 
 # Function to update system
 update_system() {
@@ -209,6 +210,19 @@ run_docker_compose_as_km() {
     echo "docker-compose started successfully."
 }
 
+clone_repo_as_km() {
+    # Specify the directory where you want to clone the repo
+    echo "Cloning the repository as user 'km'..."
+
+    # Clone the repository using sudo -u to run as user 'km'
+    if sudo -u km git clone "$SEKIN_GIT" "$KM_DIR"; then
+        echo "Repository successfully cloned into $target_directory."
+    else
+        echo "Failed to clone the repository. Please check permissions and repository URL."
+        exit 1
+    fi
+}
+
 main() {
     update_system
     install_prerequisites
@@ -216,7 +230,7 @@ main() {
     install_docker_compose
     add_user_km
     add_km_to_docker_group
-    download_compose_and_change_owner
+    # download_compose_and_change_owner
     run_docker_compose_as_km
 }
 
