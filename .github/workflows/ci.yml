@@ -55,7 +55,7 @@ jobs:
           context: .
           file: ./shidai.Dockerfile
           push: true
-          tags: ghcr.io/sekin/shidai:${{ steps.create_tag.outputs.new_tag }}
+          tags: ghcr.io/kiracore/sekin/shidai:${{ steps.create_tag.outputs.new_tag }}
           labels:
             org.opencontainers.image.authors="kira.network"
             org.opencontainers.image.url="https://github.com/KiraCore/sekin"
@@ -69,7 +69,7 @@ jobs:
       - name: Retrieve SHIDAI image digest
         id: get-shidai-digest
         run: |
-          DIGEST=$(docker inspect --format='{{index .RepoDigests 0}}' ghcr.io/sekin/shidai:v${{ steps.create_tag.outputs.new_tag }})
+          DIGEST=$(docker inspect --format='{{index .RepoDigests 0}}' ghcr.io/kiracore/sekin/shidai:v${{ steps.create_tag.outputs.new_tag }})
           echo "Digest: $DIGEST"
           echo "::set-output name=digest::$DIGEST"
 
@@ -88,7 +88,7 @@ jobs:
           context: .
           file: ./syslog-ng.Dockerfile
           push: true
-          tags: ghcr.io/sekin/syslog-ng:${{ steps.create_tag.outputs.new_tag }}
+          tags: ghcr.io/kiracore/sekin/syslog-ng:${{ steps.create_tag.outputs.new_tag }}
           labels:
             org.opencontainers.image.authors="kira.network"
             org.opencontainers.image.url="https://github.com/KiraCore/sekin"
@@ -102,7 +102,7 @@ jobs:
       - name: Retrieve SYSLOG-NG image digest
         id: get-syslog-digest
         run: |
-          DIGEST=$(docker inspect --format='{{index .RepoDigests 0}}' ghcr.io/sekin/syslog-ng:v${{ steps.create_tag.outputs.new_tag }})
+          DIGEST=$(docker inspect --format='{{index .RepoDigests 0}}' ghcr.io/kiracore/sekin/syslog-ng:v${{ steps.create_tag.outputs.new_tag }})
           echo "Digest: $DIGEST"
           echo "::set-output name=digest::$DIGEST"
 
