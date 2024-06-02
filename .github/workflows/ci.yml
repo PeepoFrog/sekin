@@ -1,0 +1,138 @@
+---
+name: Build, Release, and Sign Docker Images
+
+on:
+  pull_request:
+    branches:
+      - master
+
+    types:
+      - closed
+
+jobs:
+  setup_release:
+    if: github.event.pull_request.merged == true
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.semantic_release.outputs.version }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '16'  # Adjust the version as necessary
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Run Semantic Release
+        id: semantic_release
+        run: npx semantic-release --dry-run
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  build_and_push:
+    needs: setup_release
+    runs-on: ubuntu-latest
+    steps:
+
+      - name: Install cosign
+        uses: sigstore/cosign-installer@3
+        with:
+          cosign-release: 'v2.2.3'
+
+      - name: Confirm cosign installation
+        run: cosign version
+
+      - name: Checkout
+        uses: actions/checkout@4
+
+      - name: Log in to Docker Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push SHIDAI Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: ./shidai.Dockerfile
+          push: true
+          tags: ghcr.io/sekin/shidai:v${{ needs.setup_release.outputs.version }}
+          labels:
+            org.opencontainers.image.authors="kira.network"
+            org.opencontainers.image.url="https://github.com/KiraCore/sekin"
+            org.opencontainers.image.documentation="https://github.com/KiraCore/sekin/blob/main/README.md"
+            org.opencontainers.image.source="https://github.com/KiraCore/sekin.git"
+            org.opencontainers.image.vendor="KIRA"
+            org.opencontainers.image.licenses="CC BY-NC-SA 4.0."
+            org.opencontainers.image.title="SHIDAI"
+            org.opencontainers.image.description="Infra manager"
+
+      - name: Retrieve SHIDAI image digest
+        id: get-shidai-digest
+        run: |
+          DIGEST=$(docker inspect --format='{{index .RepoDigests 0}}' ghcr.io/sekin/shidai:v${{ needs.setup_release.outputs.version }})
+          echo "Digest: $DIGEST"
+          echo "::set-output name=digest::$DIGEST"
+
+      - name: Sign published SHIDAI Docker image with digest
+        env:
+          COSIGN_PASSWORD: ${{ secrets.COSIGN_PASSWORD }}
+        run: |
+          echo "${{ secrets.COSIGN_PRIVATE_KEY }}" > cosign.key
+          cosign sign --key cosign.key ${{ steps.get-shidai-digest.outputs.digest }} --yes
+          dd if=/dev/zero of=cosign.key bs=1 count=$(stat --format=%s cosign.key)
+          rm -f cosign.key
+           
+
+      - name: Build and push SYSLOG-NG Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: ./syslog-ng.Dockerfile
+          push: true
+          tags: ghcr.io/sekin/syslog-ng:v${{ needs.setup_release.outputs.version }}
+          labels:
+            org.opencontainers.image.authors="kira.network"
+            org.opencontainers.image.url="https://github.com/KiraCore/sekin"
+            org.opencontainers.image.documentation="https://github.com/KiraCore/sekin/blob/main/README.md"
+            org.opencontainers.image.source="https://github.com/KiraCore/sekin.git"
+            org.opencontainers.image.vendor="KIRA"
+            org.opencontainers.image.licenses="CC BY-NC-SA 4.0."
+            org.opencontainers.image.title="syslog-ng"
+            org.opencontainers.image.description="Log server"
+
+      - name: Retrieve SYSLOG-NG image digest
+        id: get-syslog-digest
+        run: |
+          DIGEST=$(docker inspect --format='{{index .RepoDigests 0}}' ghcr.io/sekin/syslog-ng:v${{ needs.setup_release.outputs.version }})
+          echo "Digest: $DIGEST"
+          echo "::set-output name=digest::$DIGEST"
+
+      - name: Sign published SYSLOG-NG Docker image with digest
+        env:
+          COSIGN_PASSWORD: ${{ secrets.COSIGN_PASSWORD }}
+        run: |
+          echo "${{ secrets.COSIGN_PRIVATE_KEY }}" > cosign.key
+          cosign sign --key cosign.key ${{ steps.get-syslog-digest.outputs.digest }} --yes
+          dd if=/dev/zero of=cosign.key bs=1 count=$(stat --format=%s cosign.key)
+          rm -f cosign.key
+
+      - name: Update image version in compose.yml
+        run: |
+          sed -i "s/syslog-ng:v[0-9]*\.[0-9]*\.[0-9]*/syslog-ng:v${{ needs.setup_release.outputs.version }}/g" compose.yml
+          sed -i "s/shidai:v[0-9]*\.[0-9]*\.[0-9]*/shidai:v${{ needs.setup_release.outputs.version }}/g" compose.yml
+
+      - name: Commit and push updated compose.yml
+        run: |
+          git config --global user.email "actions@github.com"
+          git config --global user.name "GitHub Actions"
+          git add compose.yml
+          git commit -m "feat(cidi_auto): Update compose.yml" \
+                     -m "Update image versions to v${{ needs.setup_release.outputs.version }}"
+          git push
