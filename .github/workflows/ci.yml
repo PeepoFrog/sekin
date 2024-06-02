@@ -35,7 +35,7 @@ jobs:
           VERSION=$(echo ${{ steps.create_tag.outputs.new_tag }} | sed 's/^v//')
           echo "VERSION: $VERSION"
       - name: Install cosign
-        uses: sigstore/cosign-installer@3
+        uses: sigstore/cosign-installer@v3.5.0
         with:
           cosign-release: 'v2.2.3'
 
