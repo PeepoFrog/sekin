@@ -24,6 +24,7 @@ ANSIBLE_ENTRYPOINT="$ANSIBLE_DIR/entrypoint.sh"
 # HOST
 KM_DIR="/home/km"
 SEKIN_GIT="https://github.com/KiraCore/sekin.git"
+SEKIN_DIR="$KM_DIR/sekin"
 COMPOSE_URL="https://raw.githubusercontent.com/KiraCore/sekin/main/compose.yml"
 COMPOSE_PATH="/home/km/sekin/compose.yml"
 
@@ -151,12 +152,11 @@ add_user_km() {
 
 add_km_to_docker_group() {
     echo "Adding user 'km' to the docker group..."
-    sudo usermod -aG docker km; then || :
+    sudo usermod -aG docker km || :
 }
 
 
 download_compose_and_change_owner(){
-
     # Attempt to download the file up to 5 times
     local max_attempts=5
     local attempt=1
@@ -209,8 +209,8 @@ clone_repo_as_km() {
     echo "Cloning the repository as user 'km'..."
 
     # Clone the repository using sudo -u to run as user 'km'
-    if sudo -u km git clone "$SEKIN_GIT" "$KM_DIR"; then
-        echo "Repository successfully cloned into $target_directory."
+    if sudo -u km git clone "$SEKIN_GIT" "$SEKIN_DIR"; then
+        echo "Repository successfully cloned into $SEKIN_DIR."
     else
         echo "Failed to clone the repository. Please check permissions and repository URL."
         exit 1
