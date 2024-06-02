@@ -30,24 +30,24 @@ COMPOSE_PATH="/home/km/sekin/compose.yml"
 # Function to update system
 update_system() {
     echo "Updating system..."
-    apt-get update || { echo "Failed to update system. Exiting..."; exit 1; }
+    sudo apt-get update || { echo "Failed to update system. Exiting..."; exit 1; }
 }
 
 # Function to install prerequisites
 install_prerequisites() {
     echo "Installing prerequisites..."
-    apt-get install -y apt-transport-https ca-certificates wget curl software-properties-common jq || { echo "Failed to install prerequisites. Exiting..."; exit 1; }
+    sudo apt-get install -y apt-transport-https ca-certificates wget curl software-properties-common jq || { echo "Failed to install prerequisites. Exiting..."; exit 1; }
 }
 
 # Function to install Docker
 install_docker() {
     echo "Installing Docker..."	
-    install -m 0755 -d /etc/apt/keyrings
-    curl -fsSL https://download.docker.com/linux/ubuntu/gpg -o /etc/apt/keyrings/docker.asc
-    chmod a+r /etc/apt/keyrings/docker.asc
+    sudo install -m 0755 -d /etc/apt/keyrings
+    sudo curl -fsSL https://download.docker.com/linux/ubuntu/gpg -o /etc/apt/keyrings/docker.asc
+    sudo chmod a+r /etc/apt/keyrings/docker.asc
     echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/ubuntu $(. /etc/os-release && echo "$VERSION_CODENAME") stable" | tee /etc/apt/sources.list.d/docker.list > /dev/null || { echo "Failed to add Docker repository to apt sources."; exit 1; }
-    apt-get update
-    apt-get install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin || { echo "Failed to install Docker."; exit 1; }
+    sudo apt-get update
+    sudo apt-get install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin || { echo "Failed to install Docker."; exit 1; }
 }
 
 create_dockerfile_ansible_runner() {
@@ -133,7 +133,7 @@ install_docker_compose() {
 
     # Making Docker Compose executable
     echo "Setting execute permissions for Docker Compose..."
-    chmod 755 /usr/local/bin/docker-compose || { echo "Failed to set permissions"; exit 1; }
+    sudo chmod 755 /usr/local/bin/docker-compose || { echo "Failed to set permissions"; exit 1; }
 
     # Verifying installation
     if docker-compose version; then
@@ -153,7 +153,7 @@ add_user_km() {
     else
         echo "Creating user 'km' with a home directory and bash as the default shell..."
         # Attempt to create the user 'km'
-        if useradd -m -s /bin/bash km; then
+        if sudo useradd -m -s /bin/bash km; then
             echo "User 'km' created successfully."
         else
             echo "Failed to create user 'km'.... Exiting..."
@@ -166,14 +166,14 @@ add_km_to_docker_group() {
     echo "Adding user 'km' to the docker group..."
 
     # Check if user 'km' is already in the docker group
-    if groups km | grep -q "\bdocker\b"; then
+    if sudo groups km | grep -q "\bdocker\b"; then
         echo "User 'km' is already in the docker group. No changes needed."
     else
         # Try to add user 'km' to the docker group
-        if usermod -aG docker km; then
+        if sudo usermod -aG docker km; then
             echo "User 'km' successfully added to the docker group."
         else
-            echo "Failed to add user 'km' to the docker group... Exiting..."
+             echo "Failed to add user 'km' to the docker group... Exiting..."
             exit 1
         fi
     fi
@@ -194,7 +194,7 @@ download_compose_and_change_owner(){
         if [ $? -eq 0 ]; then
             echo "Download successful. Setting ownership..."
             # Set km as the owner of the downloaded file
-            chown km:km "${COMPOSE_PATH}"
+            sudo chown km:km "${COMPOSE_PATH}"
 
             # Check if the chown command was successful
             if [ $? -eq 0 ]; then
