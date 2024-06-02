@@ -2,16 +2,19 @@
 FROM linuxserver/syslog-ng
 
 # Install necessary packages
-RUN apk add --no-cache logrotate inotify-tools
+RUN apk add --no-cache logrotate 
 
 # Copy custom logrotate config and monitoring script from the host to the container
 COPY config/logrotate.conf /etc/logrotate.d/logrotate.conf
-COPY config/monitoring.sh /usr/local/bin/monitoring.sh
+COPY config/cron_logrotate /etc/crontabs/
 COPY config/syslog-ng.conf /etc/syslog-ng/syslog-ng.conf
+
 # Ensure the monitoring script is executable
-RUN chmod +x /usr/local/bin/monitoring.sh
-RUN chown root:root /etc/logrotate.d/logrotate.conf
+RUN chown root:root /etc/logrotate.d/logrotate.conf && \
+	chmod 0640 /etc/logrotate.d/logrotate.conf && \
+	chown root:root /etc/syslog-ng/syslog-ng.conf && \
+  chmod 0640 /etc/syslog-ng/syslog-ng.conf
 
-# Set up environment to run the monitoring script in the background
-CMD ["/usr/local/bin/monitoring.sh"]
+RUN crontab /etc/crontabs/cron_logrotate
 
+CMD ["syslog-ng","-F","-c","/run/syslog-ng.ctl"]
