@@ -55,7 +55,7 @@ jobs:
           context: .
           file: ./shidai.Dockerfile
           push: true
-          tags: ghcr.io/sekin/shidai:v${{ steps.create_tag.outputs.new_tag }}
+          tags: ghcr.io/sekin/shidai:${{ steps.create_tag.outputs.new_tag }}
           labels:
             org.opencontainers.image.authors="kira.network"
             org.opencontainers.image.url="https://github.com/KiraCore/sekin"
@@ -88,7 +88,7 @@ jobs:
           context: .
           file: ./syslog-ng.Dockerfile
           push: true
-          tags: ghcr.io/sekin/syslog-ng:v${{ steps.create_tag.outputs.new_tag }}
+          tags: ghcr.io/sekin/syslog-ng:${{ steps.create_tag.outputs.new_tag }}
           labels:
             org.opencontainers.image.authors="kira.network"
             org.opencontainers.image.url="https://github.com/KiraCore/sekin"
