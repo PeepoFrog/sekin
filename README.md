@@ -19,7 +19,7 @@ chmod +x ./scripts/*
 
 ```bash
 docker compose build
-docker compose up
+docker compose up -d
 ```
 
 Apart from using compose we can build Sekai and Interx independently using Docker. 
