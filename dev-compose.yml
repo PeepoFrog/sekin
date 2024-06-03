@@ -1,0 +1,97 @@
+---
+services:
+  sekai:
+    depends_on:
+      - syslog-ng
+    image: ghcr.io/kiracore/sekin/sekai:v0.3.45
+    restart: always
+    logging:
+      driver: syslog
+      options:
+        syslog-address: "udp://10.1.0.2:514"
+        syslog-facility: local0
+        tag: "sekai"
+    volumes:
+      - ./sekai:/sekai
+    ports:
+      - "26658:26658"           # ABCI
+      - "26657:26657"           # RPC
+      - "26656:26656"           # P2P (gRPC)
+      - "26660:26660"           # Prometheus
+      - "127.0.0.1:8080:8080"             # RPC scaller
+
+    networks:
+      - kiranet
+    hostname: sekai.local
+
+  interx:
+    depends_on:
+      - syslog-ng
+    image: ghcr.io/kiracore/sekin/interx:v0.4.48
+    restart: always
+    logging:
+      driver: syslog
+      options:
+        syslog-address: "udp://10.1.0.2:514"
+        syslog-facility: local0
+        tag: "interx"
+    volumes:
+      - ./interx:/interx
+    ports:
+      - "11000:11000"
+      - "127.0.0.1:8081:8081"
+    networks:
+      - kiranet
+    hostname: interx.local
+
+  shidai:
+    depends_on:
+      - syslog-ng
+    build:
+      context: ./
+      dockerfile: shidai.Dockerfile
+    restart: always
+    ports:
+      - "127.0.0.1:8282:8282"
+    volumes:
+      - ./sekai:/sekai
+      - ./interx:/interx
+      - ./syslog-data:/syslog-data
+      - /var/run/docker.sock:/var/run/docker.sock
+    networks:
+      - kiranet
+    hostname: shidai.local
+
+  syslog-ng:
+    build:
+      context: ./
+      dockerfile: syslog-ng.Dockerfile
+    restart: always
+    healthcheck:
+      test: ["CMD", "pgrep", "syslog-ng"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+    environment:
+      - PUID=0
+      - PGID=0
+    volumes:
+      - ./syslog-data:/var/log
+    ports:
+      - "514:514/udp"
+      - "514:514"
+    networks:
+      kiranet:
+        ipv4_address: 10.1.0.2
+
+    hostname: syslog-ng.local
+
+networks:
+  kiranet:
+    name: kiranet
+    driver: bridge
+    ipam:
+      driver: default
+      config:
+        - subnet: 10.1.0.0/16
+          gateway: 10.1.0.1
