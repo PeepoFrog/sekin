@@ -6,6 +6,27 @@ import (
 )
 
 type (
+	Dashboard struct {
+		Date    string `json:"date"`
+		Dynamic struct {
+			ValidatorStatus     string `json:"val_status"`
+			Blocks              string `json:"blocks"`
+			Top                 string `json:"top"`
+			Streak              string `json:"streak"`
+			Mischance           string `json:"mischance"`
+			MischanceConfidence string `json:"mischance_confidence"`
+			StartHeight         string `json:"start_height"`
+			LastProducedBlock   string `json:"last_present_block"`
+			PuducedBlocks       string `json:"produced_blocks_counter"`
+			Moniker             string `json:"moniker"`
+		}
+		Static struct {
+			ValidatorAddress string `json:"address"`
+			NodeID           string `json:"node_id"`
+			GenesisChecksum  string `json:"gen_sha256"`
+			SeatClaimed      bool   `json:"seat_claimed"`
+		}
+	}
 	InfraFiles map[string]string
 
 	AppInfo struct {
