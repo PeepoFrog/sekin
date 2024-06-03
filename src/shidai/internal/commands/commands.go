@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net/http"
 	"strconv"
+	"time"
 
 	interxhandler "github.com/kiracore/sekin/src/shidai/internal/interx_handler"
 	mnemonicmanager "github.com/kiracore/sekin/src/shidai/internal/mnemonic_manager"
@@ -102,6 +103,7 @@ func handleJoinCommand(args map[string]interface{}) (string, error) {
 		return "", fmt.Errorf("unable to start sekai: %w", err)
 	}
 
+	time.Sleep(time.Second)
 	err = interxhandler.InitInterx(ctx, masterMnemonic)
 	if err != nil {
 		return "", fmt.Errorf("unable to init interx: %w", err)

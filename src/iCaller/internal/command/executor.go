@@ -58,8 +58,10 @@ func InterxInitCmd(args interface{}) (string, error) {
 
 	cmd := exec.Command(ExecPath, flagsStr...)
 
-	log.Printf("DEBUG: formed cmd: %+v", cmd.Args)
+	log.Printf("DEBUG: formed cmd: %+v", cmd)
+
 	output, err := cmd.CombinedOutput()
+	log.Println((string(output)), err.Error())
 	return string(output), err
 }
 
