@@ -44,6 +44,7 @@ func startCmd() *cobra.Command {
 		Short: "start",
 		Long:  "start",
 		Run: func(cmd *cobra.Command, args []string) {
+
 			api.Serve()
 		},
 	}

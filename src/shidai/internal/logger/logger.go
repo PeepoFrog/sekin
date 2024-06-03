@@ -36,7 +36,7 @@ func init() {
 
 	// Create cores for each output
 	fileCore := zapcore.NewCore(jsonEncoder, zapcore.AddSync(logFile), zap.NewAtomicLevelAt(zapcore.InfoLevel))
-	syslogCore := zapcore.NewCore(plaintextEncoder, zapcore.AddSync(syslogWriter), zap.NewAtomicLevelAt(zapcore.InfoLevel))
+	syslogCore := zapcore.NewCore(plaintextEncoder, zapcore.AddSync(syslogWriter), zap.NewAtomicLevelAt(zapcore.DebugLevel))
 
 	// Combine cores
 	combinedCore := zapcore.NewTee(fileCore, syslogCore)

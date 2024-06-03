@@ -3,29 +3,26 @@ package types
 import (
 	"errors"
 	"os"
+	"time"
 )
 
 type (
 	Dashboard struct {
-		Date    string `json:"date"`
-		Dynamic struct {
-			ValidatorStatus     string `json:"val_status"`
-			Blocks              string `json:"blocks"`
-			Top                 string `json:"top"`
-			Streak              string `json:"streak"`
-			Mischance           string `json:"mischance"`
-			MischanceConfidence string `json:"mischance_confidence"`
-			StartHeight         string `json:"start_height"`
-			LastProducedBlock   string `json:"last_present_block"`
-			PuducedBlocks       string `json:"produced_blocks_counter"`
-			Moniker             string `json:"moniker"`
-		}
-		Static struct {
-			ValidatorAddress string `json:"address"`
-			NodeID           string `json:"node_id"`
-			GenesisChecksum  string `json:"gen_sha256"`
-			SeatClaimed      bool   `json:"seat_claimed"`
-		}
+		Date                string `json:"date"`
+		ValidatorStatus     string `json:"val_status"`
+		Blocks              string `json:"blocks"`
+		Top                 string `json:"top"`
+		Streak              string `json:"streak"`
+		Mischance           string `json:"mischance"`
+		MischanceConfidence string `json:"mischance_confidence"`
+		StartHeight         string `json:"start_height"`
+		LastProducedBlock   string `json:"last_present_block"`
+		ProducedBlocks      string `json:"produced_blocks_counter"`
+		Moniker             string `json:"moniker"`
+		ValidatorAddress    string `json:"address"`
+		NodeID              string `json:"node_id"`
+		GenesisChecksum     string `json:"gen_sha256"`
+		SeatClaimAvailable  bool   `json:"seat_claim_available"`
 	}
 	InfraFiles map[string]string
 
@@ -303,6 +300,25 @@ var (
 	}
 )
 
+func NewDashboard() Dashboard {
+	return Dashboard{
+		Date:                time.Now().Format("2006-01-02 15:04:05"), // Current date and time in YYYY-MM-DD HH:MM:SS format
+		ValidatorStatus:     "Unknown",
+		Blocks:              "Unknown",
+		Top:                 "Unknown",
+		Streak:              "Unknown",
+		Mischance:           "Unknown",
+		MischanceConfidence: "Unknown",
+		StartHeight:         "Unknown",
+		LastProducedBlock:   "Unknown",
+		ProducedBlocks:      "Unknown",
+		Moniker:             "Unknown",
+		ValidatorAddress:    "Unknown",
+		NodeID:              "Unknown",
+		GenesisChecksum:     "Unknown",
+		SeatClaimAvailable:  false,
+	}
+}
 func NewDefaultAppConfig() *AppConfig {
 	return &AppConfig{
 		MinimumGasPrices:    "0stake",
