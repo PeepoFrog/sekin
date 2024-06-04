@@ -58,7 +58,7 @@ services:
       - ./interx:/interx
       - ./syslog-data:/syslog-data
       - /var/run/docker.sock:/var/run/docker.sock
-      - ./shidai:/shidai
+      - ./shidai:/shidaid
     networks:
       - kiranet
     hostname: shidai.local

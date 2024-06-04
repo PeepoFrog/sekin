@@ -3,19 +3,11 @@ package api
 import (
 	"encoding/json"
 	"os"
-	"sync"
 	"time"
 
 	"github.com/gin-gonic/gin"
 	sm "github.com/kiracore/sekin/src/shidai/internal/subscriptionmanager"
-	"github.com/kiracore/sekin/src/shidai/internal/types"
 	"go.uber.org/zap"
-)
-
-var (
-	dataFile       = "/sekai/dashboard_data.json"
-	lock           = &sync.RWMutex{}
-	dashboardCache types.Dashboard
 )
 
 func streamDashboard(manager *sm.SubscriptionManager) gin.HandlerFunc {
@@ -101,7 +93,7 @@ func createDefaultCacheFile() error {
 	log.Debug("Creating default cache file", zap.String("file", dataFile))
 
 	// Create a default Dashboard object with the current date and time
-	defaultDashboard := types.NewDashboard()
+	defaultDashboard := NewDashboard()
 	bytes, err := json.MarshalIndent(defaultDashboard, "", "  ")
 	if err != nil {
 		log.Error("Failed to marshal default dashboard data", zap.Error(err))
@@ -118,13 +110,13 @@ func createDefaultCacheFile() error {
 	return nil
 }
 
-func updateDashboardCache(newData interface{}, manager *sm.SubscriptionManager) {
-	lock.Lock()
-	dashboardCache = types.NewDashboard()
-	lock.Unlock()
-
-	manager.NotifySubscribers()
-}
+// func updateDashboardCache(newData interface{}, manager *sm.SubscriptionManager) {
+// 	lock.Lock()
+// 	dashboardCache = NewDashboard()
+// 	lock.Unlock()
+//
+// 	manager.NotifySubscribers()
+// }
 
 // func updateCachePeriodically() {
 // 	ticker := time.NewTicker(3 * time.Second) // Adjust based on how frequently you need updates
