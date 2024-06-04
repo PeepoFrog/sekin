@@ -3,6 +3,7 @@ package docker
 import (
 	"bytes"
 	"context"
+	"encoding/json"
 	"fmt"
 
 	"github.com/docker/docker/api/types"
@@ -29,6 +30,50 @@ func NewContainerManager() (*ContainerManager, error) {
 
 	log.Info("Docker client initialized successfully")
 	return &ContainerManager{Cli: cli}, nil
+}
+
+func GetAccAddress(ctx context.Context, cm *ContainerManager, containerID string) (string, error) {
+	command := []string{"/sekaid", "keys", "show", "validator", "--home", "/sekai", "--keyring-backend", "test", "--output", "json"}
+	output, err := cm.ExecInContainer(ctx, containerID, command)
+	if err != nil {
+		log.Error("Failed to execute command in container", zap.String("containerID", containerID), zap.Error(err))
+		return "", fmt.Errorf("failed to execute command in container %s: %w", containerID, err)
+	}
+
+	var result struct {
+		Address string `json:"address"`
+	}
+	err = json.Unmarshal(output, &result)
+	if err != nil {
+		log.Error("Failed to parse JSON output", zap.Error(err))
+		return "", fmt.Errorf("failed to parse JSON output: %w", err)
+	}
+
+	return result.Address, nil
+}
+
+func GetRoleID(ctx context.Context, cm *ContainerManager, containerID, address string) ([]string, error) {
+	command := []string{
+		"/sekaid", "q", "customgov", "roles", address,
+		"--node", "tcp://sekai.local:26657",
+		"--output", "json",
+	}
+	output, err := cm.ExecInContainer(ctx, containerID, command)
+	if err != nil {
+		log.Error("Failed to execute command in container", zap.String("containerID", containerID), zap.Error(err))
+		return nil, fmt.Errorf("failed to execute command in container %s: %w", containerID, err)
+	}
+
+	var result struct {
+		RoleIDs []string `json:"roleIds"`
+	}
+	err = json.Unmarshal(output, &result)
+	if err != nil {
+		log.Error("Failed to parse JSON output", zap.Error(err))
+		return nil, fmt.Errorf("failed to parse JSON output: %w", err)
+	}
+
+	return result.RoleIDs, nil
 }
 
 // ExecInContainer executes a command inside a specified container and returns the output.

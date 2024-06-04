@@ -47,7 +47,9 @@ services:
   shidai:
     depends_on:
       - syslog-ng
-    image: ghcr.io/kiracore/sekin/shidai:v0.4.0
+    build:
+      context: ./
+      dockerfile: shidai.Dockerfile
     restart: always
     ports:
       - "127.0.0.1:8282:8282"
@@ -62,7 +64,9 @@ services:
     hostname: shidai.local
 
   syslog-ng:
-    image: ghcr.io/kiracore/sekin/syslog-ng:v0.4.0
+    build:
+      context: ./
+      dockerfile: syslog-ng.Dockerfile
     restart: always
     healthcheck:
       test: ["CMD", "pgrep", "syslog-ng"]

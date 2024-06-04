@@ -30,8 +30,8 @@ func InitInterx(ctx context.Context, masterMnemonicSet *mnemonicsgenerator.Maste
 			"node_type":         nodeType,
 			"faucet_mnemonic":   signerMnemonic,
 			"signing_mnemonic":  signerMnemonic,
-			"port":              types.DEFAULT_INTERX_PORT,
-			"validator_node_id": masterMnemonicSet.ValidatorNodeId,
+			"port":              fmt.Sprintf("%v", types.DEFAULT_INTERX_PORT),
+			"validator_node_id": string(masterMnemonicSet.ValidatorNodeId),
 		},
 	}
 	out, err := httpexecutor.ExecuteCallerCommand(types.INTERX_CONTAINER_ADDRESS, "8081", "POST", cmd)
