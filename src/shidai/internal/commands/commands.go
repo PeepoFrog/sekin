@@ -4,14 +4,17 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"os"
 	"strconv"
 
 	interxhandler "github.com/kiracore/sekin/src/shidai/internal/interx_handler"
+	"github.com/kiracore/sekin/src/shidai/internal/logger"
 	mnemonicmanager "github.com/kiracore/sekin/src/shidai/internal/mnemonic_manager"
 	sekaihandler "github.com/kiracore/sekin/src/shidai/internal/sekai_handler"
 	configconstructor "github.com/kiracore/sekin/src/shidai/internal/sekai_handler/config_constructor"
 	"github.com/kiracore/sekin/src/shidai/internal/types"
 	"github.com/kiracore/sekin/src/shidai/internal/utils"
+	"go.uber.org/zap"
 
 	"github.com/gin-gonic/gin"
 )
@@ -32,10 +35,13 @@ type CommandResponse struct {
 type HandlerFunc func(map[string]interface{}) (string, error)
 
 // CommandHandlers maps command strings to handler functions
-var CommandHandlers = map[string]HandlerFunc{
-	"join":   handleJoinCommand,
-	"status": handleStatusCommand,
-}
+var (
+	log             *zap.Logger = logger.GetLogger()
+	CommandHandlers             = map[string]HandlerFunc{
+		"join":   handleJoinCommand,
+		"status": handleStatusCommand,
+	}
+)
 
 // ExecuteCommandHandler handles incoming commands and directs them to the correct function
 func ExecuteCommandHandler(c *gin.Context) {
@@ -72,6 +78,14 @@ func handleJoinCommand(args map[string]interface{}) (string, error) {
 	if !utils.ValidateMnemonic(m) || !ok {
 		return "", types.ErrInvalidOrMissingMnemonic
 	}
+	pathsToDel := []string{"/sekai/", "/interx/"}
+	for _, path := range pathsToDel {
+		err := os.RemoveAll(path)
+		if err != nil {
+			log.Error("Failed to delele ", zap.String("path", path), zap.Error(err))
+		}
+	}
+
 	masterMnemonic, err := mnemonicmanager.GenerateMnemonicsFromMaster(m)
 	if err != nil {
 		return "", err
