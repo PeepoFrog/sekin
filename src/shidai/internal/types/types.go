@@ -230,9 +230,30 @@ type (
 )
 
 const (
+	SEKAI_HOME          string = "/sekai"
+	INTERX_HOME         string = "/interx"
+	DEFAULT_INTERX_PORT int    = 11000
+	DEFAULT_P2P_PORT    int    = 26656
+	DEFAULT_RPC_PORT    int    = 26657
+	DEFAULT_GRPC_PORT   int    = 9090
+
+	SEKAI_CONTAINER_ADDRESS  string = "sekai.local"
+	INTERX_CONTAINER_ADDRESS string = "interx.local"
+
+	SEKAI_CONTAINER_ID  = "sekin-sekai-1"
+	INTERX_CONTAINER_ID = "sekin-interx-1"
+	SHIDAI_CONTAINER_ID = "sekin-shidai-1"
+	SYSLOG_CONTAINER_ID = "seking-syslog-ng-1"
+
+	SEKAI_RPC_LADDR  = "tcp://sekai.local:26657"
+	SEKAI_P2P_LADDR  = "tcp://0.0.0.0:26657"
+	SEKAI_gRPC_LADDR = "0.0.0.0:9090"
+
 	ShidaiLogPath = "/syslog-data/syslog-ng/logs/shidai.log"
 	SekaiLogPath  = "/syslog-data/syslog-ng/logs/sekai.log"
 	InterxLogPath = "/syslog-data/syslog-ng/logs/interx.log"
+
+	DashboardPath = "/shidaid/dashboard_cache.json"
 
 	InvalidOrMissingMnemonic  = "invalid or missing mnemonic"
 	InvalidOrMissingIP        = "invalid or missing IP"
