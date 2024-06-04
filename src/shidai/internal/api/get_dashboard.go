@@ -18,29 +18,37 @@ import (
 )
 
 type (
-	Dashboard struct {
-		Date                string   `json:"date"`
-		ValidatorStatus     string   `json:"val_status"`
-		Blocks              string   `json:"blocks"`
-		Top                 string   `json:"top"`
-		Streak              string   `json:"streak"`
-		Mischance           string   `json:"mischance"`
-		MischanceConfidence string   `json:"mischance_confidence"`
-		StartHeight         string   `json:"start_height"`
-		LastProducedBlock   string   `json:"last_present_block"`
-		ProducedBlocks      string   `json:"produced_blocks_counter"`
-		Moniker             string   `json:"moniker"`
-		ValidatorAddress    string   `json:"address"`
-		ChainID             string   `json:"chain_id"`
-		NodeID              string   `json:"node_id"`
-		RoleIDs             []string `json:"role_ids"`
-		SeatClaimAvailable  bool     `json:"seat_claim_available"`
-		GenesisChecksum     string   `json:"gen_sha256"`
-	}
-
 	DashboardPointer struct {
 		Data *Dashboard
 		mu   sync.RWMutex
+	}
+
+	Dashboard struct {
+		RoleIDs []string `json:"role_ids"`
+
+		Date                string `json:"date"`
+		ValidatorStatus     string `json:"val_status"`
+		Blocks              string `json:"blocks"`
+		Top                 string `json:"top"`
+		Streak              string `json:"streak"`
+		Mischance           string `json:"mischance"`
+		MischanceConfidence string `json:"mischance_confidence"`
+		StartHeight         string `json:"start_height"`
+		LastProducedBlock   string `json:"last_present_block"`
+		ProducedBlocks      string `json:"produced_blocks_counter"`
+		Moniker             string `json:"moniker"`
+		ValidatorAddress    string `json:"address"`
+		ChainID             string `json:"chain_id"`
+		NodeID              string `json:"node_id"`
+		GenesisChecksum     string `json:"gen_sha256"`
+
+		ActiveValidators   int `json:"active_validators"`
+		PausedValidators   int `json:"paused_validators"`
+		InactiveValidators int `json:"inactive_validators"`
+		JailedValidators   int `json:"jailed_validatore"`
+		WaitingValidators  int `json:"waiting_validators"`
+
+		SeatClaimAvailable bool `json:"seat_claim_available"`
 	}
 )
 
@@ -140,7 +148,7 @@ func updateDashboard() error {
 	dashboardUpdates := make(chan *Dashboard, 10) // Buffer size based on expected concurrency
 	done := make(chan error, 10)
 
-	wg.Add(3) //Increase with qty of fetches
+	wg.Add(4) //Increase with qty of fetches
 
 	go func() {
 		defer wg.Done()
@@ -155,6 +163,11 @@ func updateDashboard() error {
 	go func() {
 		defer wg.Done()
 		fetchRoleIDsFromSekaidBin(ctx, cm, types.SEKAI_CONTAINER_ID, dashboardData.ValidatorAddress, dashboardUpdates, done)
+	}()
+
+	go func() {
+		defer wg.Done()
+		fetchValidatorDataFromValopersAPI(ctx, dashboardData.ValidatorAddress, dashboardUpdates, done)
 	}()
 
 	var errors []error
@@ -267,6 +280,68 @@ func fetchAccAddressFromSekaidBin(ctx context.Context, cm *docker.ContainerManag
 	}
 	log.Info("Sending update to dashboardUpdates")
 	updates <- &Dashboard{ValidatorAddress: result.Address}
+}
+
+func fetchValidatorDataFromValopersAPI(ctx context.Context, address string, updates chan<- *Dashboard, done chan<- error) {
+	defer func() { done <- nil }()
+
+	if address == "" {
+		done <- fmt.Errorf("address can't be empty")
+		return
+	}
+
+	url := fmt.Sprintf("http://148.251.69.56:11000/api/valopers?address=%s", address)
+	resp, err := http.Get(url)
+	if err != nil {
+		done <- fmt.Errorf("failed to make HTTP request: %w", err)
+		return
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		done <- fmt.Errorf("received non-200 status code: %d", resp.StatusCode)
+		return
+	}
+
+	var apiResponse struct {
+		Validators []struct {
+			Top                   string `json:"top"`
+			Moniker               string `json:"moniker"`
+			Status                string `json:"status"`
+			Streak                string `json:"streak"`
+			Mischance             string `json:"mischance"`
+			MischanceConfidence   string `json:"mischance_confidence"`
+			StartHeight           string `json:"start_height"`
+			LastPresentBlock      string `json:"last_present_block"`
+			ProducedBlocksCounter string `json:"produced_blocks_counter"`
+		} `json:"validators"`
+	}
+
+	if err := json.NewDecoder(resp.Body).Decode(&apiResponse); err != nil {
+		done <- fmt.Errorf("failed to decode JSON response: %w", err)
+		return
+	}
+
+	if len(apiResponse.Validators) == 0 {
+		done <- fmt.Errorf("no validators found in response")
+		return
+	}
+
+	validator := apiResponse.Validators[0]
+	update := &Dashboard{
+		Top:                 validator.Top,
+		Moniker:             validator.Moniker,
+		ValidatorStatus:     validator.Status,
+		Streak:              validator.Streak,
+		Mischance:           validator.Mischance,
+		MischanceConfidence: validator.MischanceConfidence,
+		StartHeight:         validator.StartHeight,
+		LastProducedBlock:   validator.LastPresentBlock,
+		ProducedBlocks:      validator.ProducedBlocksCounter,
+	}
+
+	log.Info("Sending update to dashboardUpdates")
+	updates <- update
 }
 
 //	func fetchDummy(updates chan<- *Dashboard, done chan<- error) {
