@@ -14,6 +14,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/kiracore/sekin/src/shidai/internal/docker"
 	"github.com/kiracore/sekin/src/shidai/internal/types"
+	"github.com/kiracore/sekin/src/shidai/internal/utils"
 	"go.uber.org/zap"
 )
 
@@ -40,7 +41,7 @@ type (
 		ValidatorAddress    string `json:"address"`
 		ChainID             string `json:"chain_id"`
 		NodeID              string `json:"node_id"`
-		GenesisChecksum     string `json:"gen_sha256"`
+		GenesisChecksum     string `json:"genesis_checksum"`
 
 		ActiveValidators   int `json:"active_validators"`
 		PausedValidators   int `json:"paused_validators"`
@@ -49,6 +50,8 @@ type (
 		WaitingValidators  int `json:"waiting_validators"`
 
 		SeatClaimAvailable bool `json:"seat_claim_available"`
+		Waiting            bool `json:"seat_claim_pending"`
+		CatchingUp         bool `json:"catching_up"`
 	}
 )
 
@@ -57,23 +60,23 @@ var dashboardPointer = NewDashboardPointer()
 func NewDashboardPointer() *DashboardPointer {
 	return &DashboardPointer{
 		Data: &Dashboard{
-			Date:                "",
-			ValidatorStatus:     "",
-			Blocks:              "",
-			Top:                 "",
-			Streak:              "",
-			Mischance:           "",
-			MischanceConfidence: "",
-			StartHeight:         "",
-			LastProducedBlock:   "",
-			ProducedBlocks:      "",
-			Moniker:             "",
-			ValidatorAddress:    "",
-			ChainID:             "",
-			NodeID:              "",
-			RoleIDs:             []string{""},
+			Date:                "Unknown",
+			ValidatorStatus:     "Unknown",
+			Blocks:              "Unknown",
+			Top:                 "Unknown",
+			Streak:              "Unknown",
+			Mischance:           "Unknown",
+			MischanceConfidence: "Unknown",
+			StartHeight:         "Unknown",
+			LastProducedBlock:   "Unknown",
+			ProducedBlocks:      "Unknown",
+			Moniker:             "Unknown",
+			ValidatorAddress:    "Unknown",
+			ChainID:             "Unknown",
+			NodeID:              "Unknown",
+			RoleIDs:             []string{"Unknown"},
 			SeatClaimAvailable:  false,
-			GenesisChecksum:     "",
+			GenesisChecksum:     "Unknown",
 		},
 	}
 }
@@ -148,7 +151,7 @@ func updateDashboard() error {
 	dashboardUpdates := make(chan *Dashboard, 10) // Buffer size based on expected concurrency
 	done := make(chan error, 10)
 
-	wg.Add(4) //Increase with qty of fetches
+	wg.Add(6) //Increase with qty of fetches
 
 	go func() {
 		defer wg.Done()
@@ -170,8 +173,18 @@ func updateDashboard() error {
 		fetchValidatorDataFromValopersAPI(ctx, dashboardData.ValidatorAddress, dashboardUpdates, done)
 	}()
 
+	go func() {
+		defer wg.Done()
+		fetchValidatorsStatus(ctx, dashboardData.ValidatorAddress, dashboardUpdates, done)
+	}()
+
+	go func() {
+		defer wg.Done()
+		fetchNodeStatus(ctx, dashboardUpdates, done)
+	}()
+
 	var errors []error
-	for i := 0; i < 3; i++ { // Adjust this based on the number of goroutines
+	for i := 0; i < 6; i++ { // Adjust this based on the number of goroutines
 		if err := <-done; err != nil {
 			log.Warn("Failed to fetch some data", zap.Error(err))
 			errors = append(errors, err)
@@ -199,37 +212,63 @@ func updateDashboard() error {
 
 // applyUpdate safely applies updates to the shared dashboardPointer.
 func applyUpdate(pointer *DashboardPointer, update *Dashboard) {
-	// Lock the pointer fo r writing.
+	// Lock the pointer for writing.
 	pointer.mu.Lock()
 	defer pointer.mu.Unlock()
 
-	// Check and apply each field if the incoming update is not the default "".
-	// This example assumes "" is the default state for string fields and checks accordingly.
-
-	if update.Date != "" {
+	// Check and update each field, avoiding overwrite with "Unknown" unless intended
+	if update.Date != "Unknown" && update.Date != "" {
 		pointer.Data.Date = update.Date
 	}
-	pointer.Data.ValidatorStatus = update.ValidatorStatus
-	pointer.Data.Blocks = update.Blocks
-	pointer.Data.Top = update.Top
-	pointer.Data.Streak = update.Streak
-	pointer.Data.Mischance = update.Mischance
-	pointer.Data.MischanceConfidence = update.MischanceConfidence
-	pointer.Data.StartHeight = update.StartHeight
-	pointer.Data.LastProducedBlock = update.LastProducedBlock
-	pointer.Data.ProducedBlocks = update.ProducedBlocks
-	pointer.Data.Moniker = update.Moniker
-	if update.ValidatorAddress != "" {
+	if update.ValidatorStatus != "Unknown" && update.ValidatorStatus != "" {
+		pointer.Data.ValidatorStatus = update.ValidatorStatus
+	}
+	if update.Blocks != "Unknown" && update.Blocks != "" {
+		pointer.Data.Blocks = update.Blocks
+	}
+	if update.Top != "Unknown" && update.Top != "" {
+		pointer.Data.Top = update.Top
+	}
+	if update.Streak != "Unknown" && update.Streak != "" {
+		pointer.Data.Streak = update.Streak
+	}
+	if update.Mischance != "Unknown" && update.Mischance != "" {
+		pointer.Data.Mischance = update.Mischance
+	}
+	if update.MischanceConfidence != "Unknown" && update.MischanceConfidence != "" {
+		pointer.Data.MischanceConfidence = update.MischanceConfidence
+	}
+	if update.StartHeight != "Unknown" && update.StartHeight != "" {
+		pointer.Data.StartHeight = update.StartHeight
+	}
+	if update.LastProducedBlock != "Unknown" && update.LastProducedBlock != "" {
+		pointer.Data.LastProducedBlock = update.LastProducedBlock
+	}
+	if update.ProducedBlocks != "Unknown" && update.ProducedBlocks != "" {
+		pointer.Data.ProducedBlocks = update.ProducedBlocks
+	}
+	if update.Moniker != "Unknown" && update.Moniker != "" {
+		pointer.Data.Moniker = update.Moniker
+	}
+	if update.ValidatorAddress != "Unknown" && update.ValidatorAddress != "" {
 		pointer.Data.ValidatorAddress = update.ValidatorAddress
 	}
-	pointer.Data.ValidatorAddress = update.ValidatorAddress
-	pointer.Data.ChainID = update.ChainID
-	pointer.Data.NodeID = update.NodeID
-	if len(update.RoleIDs) > 0 {
+	if update.ChainID != "Unknown" && update.ChainID != "" {
+		pointer.Data.ChainID = update.ChainID
+	}
+	if update.NodeID != "Unknown" && update.NodeID != "" {
+		pointer.Data.NodeID = update.NodeID
+	}
+	if len(update.RoleIDs) > 0 && update.RoleIDs[0] != "Unknown" {
 		pointer.Data.RoleIDs = update.RoleIDs
 	}
+	if update.GenesisChecksum != "Unknown" && update.GenesisChecksum != "" {
+		pointer.Data.GenesisChecksum = update.GenesisChecksum
+	}
 	pointer.Data.SeatClaimAvailable = update.SeatClaimAvailable
-	pointer.Data.GenesisChecksum = update.GenesisChecksum
+	pointer.Data.Waiting = update.Waiting
+	pointer.Data.CatchingUp = update.CatchingUp
+
 }
 
 func fetchRoleIDsFromSekaidBin(ctx context.Context, cm *docker.ContainerManager, containerID, adr string, updates chan<- *Dashboard, done chan<- error) {
@@ -253,7 +292,6 @@ func fetchRoleIDsFromSekaidBin(ctx context.Context, cm *docker.ContainerManager,
 		return
 
 	}
-	log.Info("Sending update to dashboardUpdates")
 	updates <- &Dashboard{RoleIDs: result.RoleIDs}
 }
 
@@ -278,19 +316,18 @@ func fetchAccAddressFromSekaidBin(ctx context.Context, cm *docker.ContainerManag
 		done <- fmt.Errorf("faile d to parse JSON output: %w", err)
 		return
 	}
-	log.Info("Sending update to dashboardUpdates")
 	updates <- &Dashboard{ValidatorAddress: result.Address}
 }
 
 func fetchValidatorDataFromValopersAPI(ctx context.Context, address string, updates chan<- *Dashboard, done chan<- error) {
 	defer func() { done <- nil }()
-
+	log.Debug("Fetching data from valopers endpoint")
 	if address == "" {
 		done <- fmt.Errorf("address can't be empty")
 		return
 	}
 
-	url := fmt.Sprintf("http://148.251.69.56:11000/api/valopers?address=%s", address)
+	url := fmt.Sprintf("http://interx.local:11000/api/valopers?address=%s", address)
 	resp, err := http.Get(url)
 	if err != nil {
 		done <- fmt.Errorf("failed to make HTTP request: %w", err)
@@ -340,6 +377,108 @@ func fetchValidatorDataFromValopersAPI(ctx context.Context, address string, upda
 		ProducedBlocks:      validator.ProducedBlocksCounter,
 	}
 
+	updates <- update
+}
+func fetchValidatorsStatus(ctx context.Context, address string, updates chan<- *Dashboard, done chan<- error) {
+	defer func() { done <- nil }()
+	log.Debug("Fetching validators status block")
+	if address == "" {
+		done <- fmt.Errorf("address can't be empty")
+		return
+	}
+
+	url := "http://interx.local:11000/api/valopers?all=true"
+	resp, err := http.Get(url)
+	if err != nil {
+		done <- fmt.Errorf("failed to make HTTP request: %w", err)
+		return
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		done <- fmt.Errorf("received non-200 status code: %d", resp.StatusCode)
+		return
+	}
+
+	var apiResponse struct {
+		Status struct {
+			ActiveValidators   int `json:"active_validators"`
+			PausedValidators   int `json:"paused_validators"`
+			InactiveValidators int `json:"inactive_validators"`
+			JailedValidators   int `json:"jailed_validators"`
+			TotalValidators    int `json:"total_validators"`
+			WaitingValidators  int `json:"waiting_validators"`
+		} `json:"status"`
+		Waiting []string `json:"waiting"`
+	}
+
+	if err := json.NewDecoder(resp.Body).Decode(&apiResponse); err != nil {
+		done <- fmt.Errorf("failed to decode JSON response: %w", err)
+		return
+	}
+
+	// Update Dashboard structure
+	update := &Dashboard{
+		ActiveValidators:   apiResponse.Status.ActiveValidators,
+		PausedValidators:   apiResponse.Status.PausedValidators,
+		InactiveValidators: apiResponse.Status.InactiveValidators,
+		JailedValidators:   apiResponse.Status.JailedValidators,
+		WaitingValidators:  apiResponse.Status.WaitingValidators,
+	}
+
+	// Check if the provided address is in the waiting list
+	for _, waitingAddress := range apiResponse.Waiting {
+		if waitingAddress == address {
+			update.SeatClaimAvailable = true
+			break
+		}
+	}
+
+	updates <- update
+}
+
+func fetchNodeStatus(ctx context.Context, updates chan<- *Dashboard, done chan<- error) {
+	defer func() { done <- nil }()
+	log.Debug("Fetching node status from interx")
+	url := "http://interx.local:11000/api/status"
+	resp, err := http.Get(url)
+	if err != nil {
+		done <- fmt.Errorf("failed to make HTTP request: %w", err)
+		return
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		done <- fmt.Errorf("received non-200 status code: %d", resp.StatusCode)
+		return
+	}
+
+	var apiResponse struct {
+		ID         string `json:"id"`
+		InterxInfo struct {
+			ChainID         string `json:"chain_id"`
+			GenesisChecksum string `json:"genesis_checksum"`
+		} `json:"interx_info"`
+		SyncInfo struct {
+			LatestBlockHeight string `json:"latest_block_height"`
+			CatchingUp        bool   `json:"catching_up"`
+		} `json:"sync_info"`
+	}
+
+	if err := json.NewDecoder(resp.Body).Decode(&apiResponse); err != nil {
+		done <- fmt.Errorf("failed to decode JSON response: %w", err)
+		return
+	}
+
+	// Create an update based on the fetched data
+	update := &Dashboard{
+		NodeID:          apiResponse.ID,
+		ChainID:         apiResponse.InterxInfo.ChainID,
+		Blocks:          apiResponse.SyncInfo.LatestBlockHeight,
+		CatchingUp:      apiResponse.SyncInfo.CatchingUp,
+		GenesisChecksum: apiResponse.InterxInfo.GenesisChecksum,
+	}
+
 	log.Info("Sending update to dashboardUpdates")
 	updates <- update
 }
@@ -349,13 +488,29 @@ func fetchValidatorDataFromValopersAPI(ctx context.Context, address string, upda
 //		done <- fmt.Errorf("error")
 //		updates <- &Dashboard{Key: Value}
 //	}
+func fetchIfClaimAvailable(ctx context.Context, d *Dashboard, updates chan<- *Dashboard, done chan<- error) {
+	defer func() { done <- nil }()
+	log.Debug("Evaluating if seat claim is available")
 
+	// Ensure there is data to evaluate
+	if d == nil {
+		done <- fmt.Errorf("dashboard data is nil")
+		return
+	}
+
+	// Check the specific conditions to set SeatClaimAvailable
+	claimAvailable := utils.ContainsValue(d.RoleIDs, "2") && d.Waiting && !d.CatchingUp
+
+	// Create a minimal Dashboard update just with the necessary field
+	updates <- &Dashboard{
+		SeatClaimAvailable: claimAvailable,
+	}
+}
 func fetchDateNow(updates chan<- *Dashboard, done chan<- error) {
 	defer func() { done <- nil }()
 	log.Debug("Fetching date ")
 	now := time.Now()
 	formattedDate := now.Format("2006-01-02 15:04:05")
-	log.Info("Sending update to dashboardUpdates")
 	updates <- &Dashboard{Date: formattedDate}
 
 }

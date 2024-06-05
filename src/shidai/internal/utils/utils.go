@@ -16,6 +16,15 @@ import (
 
 var log = logger.GetLogger()
 
+func ContainsValue(slice []string, element string) bool {
+	for _, v := range slice {
+		if v == element {
+			return true
+		}
+	}
+	return false
+}
+
 // ValidateIP checks if the given string is a valid IPv4 or IPv6 address.
 // It returns true if the IP is valid, otherwise returns false.
 func ValidateIP(ip string) bool {
