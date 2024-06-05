@@ -16,20 +16,15 @@ func Serve() {
 
 	router := gin.New()
 	router.Use(gin.Recovery())
-	//manager := sm.NewSubscriptionManager()
-	if err := initCache(); err != nil {
-		log.Fatal("Failed to initialize dashboard cache", zap.Error(err))
-
-	}
-
-	go backgroundUpdate()
 
 	router.POST("/api/execute", commands.ExecuteCommandHandler)
 	router.GET("/logs/shidai", streamLogs(types.ShidaiLogPath))
 	router.GET("/logs/sekai", streamLogs(types.SekaiLogPath))
 	router.GET("/logs/interx", streamLogs(types.InterxLogPath))
 	router.GET("/status", infraStatus())
-	router.GET("/dashboard", getDashboard())
+	router.GET("/dashboard", getDashboardHandler())
+
+	go backgroundUpdate()
 
 	if err := router.Run(":8282"); err != nil {
 		log.Error("Failed to start the server", zap.Error(err))

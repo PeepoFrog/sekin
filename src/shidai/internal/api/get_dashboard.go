@@ -1,67 +1,101 @@
 package api
 
 import (
+	"bufio"
 	"context"
-	"crypto/sha256"
-	"encoding/hex"
 	"encoding/json"
 	"fmt"
-	"io"
 	"net/http"
 	"os"
-	"strings"
+	"strconv"
 	"sync"
 	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/kiracore/sekin/src/shidai/internal/docker"
+	"github.com/kiracore/sekin/src/shidai/internal/types"
+	"github.com/kiracore/sekin/src/shidai/internal/utils"
 	"go.uber.org/zap"
 )
 
 type (
+	DashboardPointer struct {
+		Data *Dashboard
+		mu   sync.RWMutex
+	}
+
 	Dashboard struct {
-		Date                string   `json:"date"`
-		ValidatorStatus     string   `json:"val_status"`
-		Blocks              string   `json:"blocks"`
-		Top                 string   `json:"top"`
-		Streak              string   `json:"streak"`
-		Mischance           string   `json:"mischance"`
-		MischanceConfidence string   `json:"mischance_confidence"`
-		StartHeight         string   `json:"start_height"`
-		LastProducedBlock   string   `json:"last_present_block"`
-		ProducedBlocks      string   `json:"produced_blocks_counter"`
-		Moniker             string   `json:"moniker"`
-		ValidatorAddress    string   `json:"address"`
-		NodeID              string   `json:"node_id"`
-		RoleID              []string `json:"role_ids"`
-		GenesisChecksum     string   `json:"gen_sha256"`
-		SeatClaimAvailable  bool     `json:"seat_claim_available"`
+		RoleIDs []string `json:"role_ids"`
+
+		Date                string `json:"date"`
+		ValidatorStatus     string `json:"val_status"`
+		Blocks              string `json:"blocks"`
+		Top                 string `json:"top"`
+		Streak              string `json:"streak"`
+		Mischance           string `json:"mischance"`
+		MischanceConfidence string `json:"mischance_confidence"`
+		StartHeight         string `json:"start_height"`
+		LastProducedBlock   string `json:"last_present_block"`
+		ProducedBlocks      string `json:"produced_blocks_counter"`
+		Moniker             string `json:"moniker"`
+		ValidatorAddress    string `json:"address"`
+		ChainID             string `json:"chain_id"`
+		NodeID              string `json:"node_id"`
+		GenesisChecksum     string `json:"genesis_checksum"`
+
+		ActiveValidators   int `json:"active_validators"`
+		PausedValidators   int `json:"paused_validators"`
+		InactiveValidators int `json:"inactive_validators"`
+		JailedValidators   int `json:"jailed_validatore"`
+		WaitingValidators  int `json:"waiting_validators"`
+
+		SeatClaimAvailable bool `json:"seat_claim_available"`
+		Waiting            bool `json:"seat_claim_pending"`
+		CatchingUp         bool `json:"catching_up"`
 	}
 )
 
-var (
-	dashboardCache *Dashboard
-	lock           sync.RWMutex
-	dataFile       = "/shidaid/dashboard_cache.json"
-)
+var dashboardPointer = NewDashboardPointer()
 
-func NewDashboard() Dashboard {
-	return Dashboard{
-		Date:                getCurrentTimeString(), // Current date and time in YYYY-MM-DD HH:MM:SS format
-		ValidatorStatus:     "Unknown",
-		Blocks:              "Unknown",
-		Top:                 "Unknown",
-		Streak:              "Unknown",
-		Mischance:           "Unknown",
-		MischanceConfidence: "Unknown",
-		StartHeight:         "Unknown",
-		LastProducedBlock:   "Unknown",
-		ProducedBlocks:      "Unknown",
-		Moniker:             "Unknown",
-		ValidatorAddress:    "Unknown",
-		NodeID:              "Unknown",
-		GenesisChecksum:     "Unknown",
-		SeatClaimAvailable:  false,
+func NewDashboardPointer() *DashboardPointer {
+	return &DashboardPointer{
+		Data: &Dashboard{
+			Date:                "Unknown",
+			ValidatorStatus:     "Unknown",
+			Blocks:              "Unknown",
+			Top:                 "Unknown",
+			Streak:              "Unknown",
+			Mischance:           "Unknown",
+			MischanceConfidence: "Unknown",
+			StartHeight:         "Unknown",
+			LastProducedBlock:   "Unknown",
+			ProducedBlocks:      "Unknown",
+			Moniker:             "Unknown",
+			ValidatorAddress:    "Unknown",
+			ChainID:             "Unknown",
+			NodeID:              "Unknown",
+			RoleIDs:             []string{"Unknown"},
+			SeatClaimAvailable:  false,
+			GenesisChecksum:     "Unknown",
+		},
+	}
+}
+
+func getDashboardHandler() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		dashboardPointer.mu.RLock()
+		clone := dashboardPointer.Data.DeepCopy() // Use the read lock to allow concurrent reads
+		defer dashboardPointer.mu.RUnlock()
+
+		// Instead of reading from file, directly marshal the in-memory dashboard
+		dashboardJSON, err := json.Marshal(clone)
+		if err != nil {
+			log.Error("Failed to marshal dashboard data", zap.Error(err))
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Unable to marshal dashboard data"})
+			return
+		}
+
+		c.Data(http.StatusOK, "application/json", dashboardJSON)
 	}
 }
 
@@ -72,132 +106,243 @@ func backgroundUpdate() {
 	for range ticker.C {
 		log.Debug("Starting background update")
 
-		// Update the dashboard data
-		updateDashboard()
-
-		// Persist the updated data to the file
-		lock.Lock()
-		bytes, err := json.Marshal(dashboardCache)
-		if err != nil {
-			log.Error("Failed to marshal dashboard cache", zap.Error(err))
-		} else if err := os.WriteFile(dataFile, bytes, 0640); err != nil {
-			log.Error("Failed to write dashboard cache to file", zap.String("file", dataFile), zap.Error(err))
-		} else {
-			log.Info("Dashboard cache updated and saved to file", zap.String("file", dataFile))
-		}
-		lock.Unlock()
-	}
-}
-
-func getDashboard() gin.HandlerFunc {
-	return func(c *gin.Context) {
-		lock.RLock()
-		defer lock.RUnlock()
-
-		bytes, err := os.ReadFile(dataFile)
-		if err != nil {
-			log.Error("Failed to read dashboard cache", zap.String("file", dataFile), zap.Error(err))
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "Unable to fetch dashboard"})
-			return
+		if err := updateDashboard(); err != nil {
+			log.Error("Failed to update dashboard", zap.Error(err))
+			continue
 		}
 
-		c.Data(http.StatusOK, "application/json", bytes)
-	}
-}
-
-func updateDashboard() {
-	cm, _ := docker.NewContainerManager()
-
-	addr, err := docker.GetAccAddress(context.Background(), cm, "sekin-sekai-1")
-	if err != nil {
-		log.Error("Failed to get account address", zap.Error(err))
-		addr = "Unknown"
-	}
-
-	id, err := docker.GetRoleID(context.Background(), cm, "sekin-sekai-1", addr)
-	if err != nil {
-		log.Error("Failed to get role ID", zap.Error(err))
-		id = []string{"Unknown"}
-	}
-
-	resp, err := fetchValidatorData(addr)
-	if err != nil {
-		log.Error("Failed to fetch validator data", zap.Error(err))
-		// Set relevant fields to "Unknown" if an error occurs
-		dashboardCache = &Dashboard{
-			Date:                getCurrentTimeString(),
-			ValidatorAddress:    addr,
-			NodeID:              "Unknown",
-			RoleID:              id,
-			ValidatorStatus:     "Unknown",
-			Top:                 "Unknown",
-			Streak:              "Unknown",
-			Mischance:           "Unknown",
-			MischanceConfidence: "Unknown",
-			StartHeight:         "Unknown",
-			LastProducedBlock:   "Unknown",
-			ProducedBlocks:      "Unknown",
-			Moniker:             "Unknown",
-		}
-	} else {
-		dashboard, err := mapResponseToDashboard(resp)
-		if err != nil {
-			log.Error("Failed to map response to dashboard", zap.Error(err))
-			// Set relevant fields to "Unknown" if an error occurs
-			dashboardCache = &Dashboard{
-				Date:                getCurrentTimeString(),
-				ValidatorAddress:    addr,
-				NodeID:              "Unknown",
-				RoleID:              id,
-				ValidatorStatus:     "Unknown",
-				Top:                 "Unknown",
-				Streak:              "Unknown",
-				Mischance:           "Unknown",
-				MischanceConfidence: "Unknown",
-				StartHeight:         "Unknown",
-				LastProducedBlock:   "Unknown",
-				ProducedBlocks:      "Unknown",
-				Moniker:             "Unknown",
-			}
-		} else {
-			dashboardCache = dashboard
-			dashboardCache.Date = getCurrentTimeString()
-			dashboardCache.ValidatorAddress = addr
-			dashboardCache.RoleID = id
-			dashboardCache.GenesisChecksum = getFileSHA256(dataFile)
-			dashboardCache.SeatClaimAvailable = containsTwo(dashboardCache.RoleID)
-
+		if err := saveDashboardToFile(); err != nil {
+			log.Error("Failed to save dashboard to file", zap.String("file", types.DashboardPath), zap.Error(err))
 		}
 	}
 }
 
-func fetchValidatorData(address string) ([]byte, error) {
+func saveDashboardToFile() error {
+	dashboardPointer.mu.Lock()
+	defer dashboardPointer.mu.Unlock()
+
+	writer, err := os.OpenFile(types.DashboardPath, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, types.FilePermRW)
+	if err != nil {
+		return fmt.Errorf("failed to open file for writing: %w", err)
+	}
+	defer writer.Close()
+
+	bufWriter := bufio.NewWriter(writer)
+	if err := json.NewEncoder(bufWriter).Encode(dashboardPointer.Data); err != nil {
+		return fmt.Errorf("failed to marshal and write dashboard: %w", err)
+	}
+	if err := bufWriter.Flush(); err != nil {
+		return fmt.Errorf("failed to flush write buffer: %w", err)
+	}
+
+	log.Info("Dashboard pointer updated and saved to file", zap.String("file", types.DashboardPath))
+	return nil
+}
+
+func updateDashboard() error {
+	ctx := context.Background()
+	cm, err := docker.NewContainerManager()
+	if err != nil {
+		return err
+	}
+
+	var wg sync.WaitGroup
+	dashboardData := dashboardPointer.GetDashboardData()
+	dashboardUpdates := make(chan *Dashboard, 10) // Buffer size based on expected concurrency
+	done := make(chan error, 10)
+
+	wg.Add(6) //Increase with qty of fetches
+
+	go func() {
+		defer wg.Done()
+		fetchDateNow(dashboardUpdates, done)
+	}()
+
+	go func() {
+		defer wg.Done()
+		fetchAccAddressFromSekaidBin(ctx, cm, types.SEKAI_CONTAINER_ID, dashboardUpdates, done)
+	}()
+
+	go func() {
+		defer wg.Done()
+		fetchRoleIDsFromSekaidBin(ctx, cm, types.SEKAI_CONTAINER_ID, dashboardData.ValidatorAddress, dashboardUpdates, done)
+	}()
+
+	go func() {
+		defer wg.Done()
+		fetchValidatorDataFromValopersAPI(ctx, dashboardData.ValidatorAddress, dashboardUpdates, done)
+	}()
+
+	go func() {
+		defer wg.Done()
+		fetchValidatorsStatus(ctx, dashboardData.ValidatorAddress, dashboardUpdates, done)
+	}()
+
+	go func() {
+		defer wg.Done()
+		fetchNodeStatus(ctx, dashboardUpdates, done)
+	}()
+
+	var errors []error
+	for i := 0; i < 6; i++ { // Adjust this based on the number of goroutines
+		if err := <-done; err != nil {
+			log.Warn("Failed to fetch some data", zap.Error(err))
+			errors = append(errors, err)
+		}
+	}
+
+	go func() {
+		wg.Wait()
+		close(dashboardUpdates)
+		close(done)
+	}()
+	if len(errors) > 0 {
+		log.Warn("Fetching ecnounted errors", zap.String("times", strconv.Itoa(len(errors))))
+		for _, err := range errors {
+			log.Error("Detail[FETCH]: ", zap.Error(err))
+		}
+	}
+
+	for update := range dashboardUpdates {
+		applyUpdate(dashboardPointer, update) // Apply updates to the central dashboardPointer
+	}
+
+	return nil
+}
+
+// applyUpdate safely applies updates to the shared dashboardPointer.
+func applyUpdate(pointer *DashboardPointer, update *Dashboard) {
+	// Lock the pointer for writing.
+	pointer.mu.Lock()
+	defer pointer.mu.Unlock()
+
+	// Check and update each field, avoiding overwrite with "Unknown" unless intended
+	if update.Date != "Unknown" && update.Date != "" {
+		pointer.Data.Date = update.Date
+	}
+	if update.ValidatorStatus != "Unknown" && update.ValidatorStatus != "" {
+		pointer.Data.ValidatorStatus = update.ValidatorStatus
+	}
+	if update.Blocks != "Unknown" && update.Blocks != "" {
+		pointer.Data.Blocks = update.Blocks
+	}
+	if update.Top != "Unknown" && update.Top != "" {
+		pointer.Data.Top = update.Top
+	}
+	if update.Streak != "Unknown" && update.Streak != "" {
+		pointer.Data.Streak = update.Streak
+	}
+	if update.Mischance != "Unknown" && update.Mischance != "" {
+		pointer.Data.Mischance = update.Mischance
+	}
+	if update.MischanceConfidence != "Unknown" && update.MischanceConfidence != "" {
+		pointer.Data.MischanceConfidence = update.MischanceConfidence
+	}
+	if update.StartHeight != "Unknown" && update.StartHeight != "" {
+		pointer.Data.StartHeight = update.StartHeight
+	}
+	if update.LastProducedBlock != "Unknown" && update.LastProducedBlock != "" {
+		pointer.Data.LastProducedBlock = update.LastProducedBlock
+	}
+	if update.ProducedBlocks != "Unknown" && update.ProducedBlocks != "" {
+		pointer.Data.ProducedBlocks = update.ProducedBlocks
+	}
+	if update.Moniker != "Unknown" && update.Moniker != "" {
+		pointer.Data.Moniker = update.Moniker
+	}
+	if update.ValidatorAddress != "Unknown" && update.ValidatorAddress != "" {
+		pointer.Data.ValidatorAddress = update.ValidatorAddress
+	}
+	if update.ChainID != "Unknown" && update.ChainID != "" {
+		pointer.Data.ChainID = update.ChainID
+	}
+	if update.NodeID != "Unknown" && update.NodeID != "" {
+		pointer.Data.NodeID = update.NodeID
+	}
+	if len(update.RoleIDs) > 0 && update.RoleIDs[0] != "Unknown" {
+		pointer.Data.RoleIDs = update.RoleIDs
+	}
+	if update.GenesisChecksum != "Unknown" && update.GenesisChecksum != "" {
+		pointer.Data.GenesisChecksum = update.GenesisChecksum
+	}
+	pointer.Data.SeatClaimAvailable = update.SeatClaimAvailable
+	pointer.Data.Waiting = update.Waiting
+	pointer.Data.CatchingUp = update.CatchingUp
+
+}
+
+func fetchRoleIDsFromSekaidBin(ctx context.Context, cm *docker.ContainerManager, containerID, adr string, updates chan<- *Dashboard, done chan<- error) {
+	defer func() { done <- nil }()
+	log.Debug("Fetching roleID from sekai container")
+	if containerID == "" || adr == "" {
+		done <- fmt.Errorf("containerID or address can't be empty")
+		return
+	}
+	command := []string{"/sekaid", "q", "customgov", "roles", adr, "--node", types.SEKAI_RPC_LADDR, "--output", "json"}
+	ouput, err := cm.ExecInContainer(ctx, containerID, command)
+	if err != nil {
+		done <- fmt.Errorf("failed to execute command in container %s: %w", containerID, err)
+		return
+	}
+	var result struct {
+		RoleIDs []string `json:"roleids"`
+	}
+	if err = json.Unmarshal(ouput, &result); err != nil {
+		done <- fmt.Errorf("failed to parse JSON output: %w", err)
+		return
+
+	}
+	updates <- &Dashboard{RoleIDs: result.RoleIDs}
+}
+
+func fetchAccAddressFromSekaidBin(ctx context.Context, cm *docker.ContainerManager, containerID string, updates chan<- *Dashboard, done chan<- error) {
+	defer func() { done <- nil }()
+	log.Debug("Fetching address from sekai container")
+	if containerID == "" {
+		done <- fmt.Errorf("containerID can't be empty")
+		return
+	}
+	command := []string{"/sekaid", "keys", "show", "validator", "--home", "/sekai", "--keyring-backend", "test", "--output", "json"}
+	output, err := cm.ExecInContainer(ctx, containerID, command)
+	if err != nil {
+		done <- fmt.Errorf("failed to execute command in container %s: %w", containerID, err)
+		return
+	}
+
+	var result struct {
+		Address string `json:"address"`
+	}
+	if err = json.Unmarshal(output, &result); err != nil {
+		done <- fmt.Errorf("faile d to parse JSON output: %w", err)
+		return
+	}
+	updates <- &Dashboard{ValidatorAddress: result.Address}
+}
+
+func fetchValidatorDataFromValopersAPI(ctx context.Context, address string, updates chan<- *Dashboard, done chan<- error) {
+	defer func() { done <- nil }()
+	log.Debug("Fetching data from valopers endpoint")
+	if address == "" {
+		done <- fmt.Errorf("address can't be empty")
+		return
+	}
+
 	url := fmt.Sprintf("http://interx.local:11000/api/valopers?address=%s", address)
-	log.Debug("Fetching validator data", zap.String("url", url))
-
 	resp, err := http.Get(url)
 	if err != nil {
-		return nil, fmt.Errorf("failed to make HTTP request: %w", err)
+		done <- fmt.Errorf("failed to make HTTP request: %w", err)
+		return
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("unexpected status code: %d", resp.StatusCode)
+		done <- fmt.Errorf("received non-200 status code: %d", resp.StatusCode)
+		return
 	}
 
-	body, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return nil, fmt.Errorf("failed to read response body: %w", err)
-	}
-
-	return body, nil
-}
-
-func mapResponseToDashboard(jsonResponse []byte) (*Dashboard, error) {
-	var response struct {
+	var apiResponse struct {
 		Validators []struct {
 			Top                   string `json:"top"`
-			Address               string `json:"address"`
 			Moniker               string `json:"moniker"`
 			Status                string `json:"status"`
 			Streak                string `json:"streak"`
@@ -209,74 +354,184 @@ func mapResponseToDashboard(jsonResponse []byte) (*Dashboard, error) {
 		} `json:"validators"`
 	}
 
-	err := json.Unmarshal(jsonResponse, &response)
-	if err != nil {
-		return nil, fmt.Errorf("failed to unmarshal JSON response: %w", err)
+	if err := json.NewDecoder(resp.Body).Decode(&apiResponse); err != nil {
+		done <- fmt.Errorf("failed to decode JSON response: %w", err)
+		return
 	}
 
-	if len(response.Validators) == 0 {
-		return nil, fmt.Errorf("no validator found in the response")
+	if len(apiResponse.Validators) == 0 {
+		done <- fmt.Errorf("no validators found in response")
+		return
 	}
 
-	validator := response.Validators[0]
-	dashboard := &Dashboard{
-		Date:                getCurrentTimeString(),
-		ValidatorStatus:     validator.Status,
+	validator := apiResponse.Validators[0]
+	update := &Dashboard{
 		Top:                 validator.Top,
+		Moniker:             validator.Moniker,
+		ValidatorStatus:     validator.Status,
 		Streak:              validator.Streak,
 		Mischance:           validator.Mischance,
 		MischanceConfidence: validator.MischanceConfidence,
 		StartHeight:         validator.StartHeight,
 		LastProducedBlock:   validator.LastPresentBlock,
 		ProducedBlocks:      validator.ProducedBlocksCounter,
-		Moniker:             strings.Trim(validator.Moniker, "\""),
 	}
 
-	return dashboard, nil
+	updates <- update
 }
+func fetchValidatorsStatus(ctx context.Context, address string, updates chan<- *Dashboard, done chan<- error) {
+	defer func() { done <- nil }()
+	log.Debug("Fetching validators status block")
+	if address == "" {
+		done <- fmt.Errorf("address can't be empty")
+		return
+	}
 
-func getFileSHA256(filePath string) string {
-	file, err := os.Open(filePath)
+	url := "http://interx.local:11000/api/valopers?all=true"
+	resp, err := http.Get(url)
 	if err != nil {
-		log.Error("failed to open ", zap.String("file", filePath), zap.Error(err))
-		return "Unknown"
+		done <- fmt.Errorf("failed to make HTTP request: %w", err)
+		return
 	}
-	defer file.Close()
+	defer resp.Body.Close()
 
-	hash := sha256.New()
-	if _, err := io.Copy(hash, file); err != nil {
-
-		log.Error("failed to get hash ", zap.String("file", filePath), zap.Error(err))
-		return "Unknown"
+	if resp.StatusCode != http.StatusOK {
+		done <- fmt.Errorf("received non-200 status code: %d", resp.StatusCode)
+		return
 	}
 
-	checksum := hash.Sum(nil)
-	return hex.EncodeToString(checksum)
-}
-func containsTwo(arr interface{}) bool {
-	// Check if the input is a slice of strings
-	strArr, ok := arr.([]string)
-	if !ok {
-		return false
+	var apiResponse struct {
+		Status struct {
+			ActiveValidators   int `json:"active_validators"`
+			PausedValidators   int `json:"paused_validators"`
+			InactiveValidators int `json:"inactive_validators"`
+			JailedValidators   int `json:"jailed_validators"`
+			TotalValidators    int `json:"total_validators"`
+			WaitingValidators  int `json:"waiting_validators"`
+		} `json:"status"`
+		Waiting []string `json:"waiting"`
 	}
 
-	limit := len(strArr)
-	if limit > 10 {
-		limit = 10
+	if err := json.NewDecoder(resp.Body).Decode(&apiResponse); err != nil {
+		done <- fmt.Errorf("failed to decode JSON response: %w", err)
+		return
 	}
 
-	for i := 0; i < limit; i++ {
-		// Convert each element to a string and compare with "2"
-		if fmt.Sprint(strArr[i]) == "2" {
-			return true
+	// Update Dashboard structure
+	update := &Dashboard{
+		ActiveValidators:   apiResponse.Status.ActiveValidators,
+		PausedValidators:   apiResponse.Status.PausedValidators,
+		InactiveValidators: apiResponse.Status.InactiveValidators,
+		JailedValidators:   apiResponse.Status.JailedValidators,
+		WaitingValidators:  apiResponse.Status.WaitingValidators,
+	}
+
+	// Check if the provided address is in the waiting list
+	for _, waitingAddress := range apiResponse.Waiting {
+		if waitingAddress == address {
+			update.SeatClaimAvailable = true
+			break
 		}
 	}
 
-	return false
+	updates <- update
 }
 
-func getCurrentTimeString() string {
+func fetchNodeStatus(ctx context.Context, updates chan<- *Dashboard, done chan<- error) {
+	defer func() { done <- nil }()
+	log.Debug("Fetching node status from interx")
+	url := "http://interx.local:11000/api/status"
+	resp, err := http.Get(url)
+	if err != nil {
+		done <- fmt.Errorf("failed to make HTTP request: %w", err)
+		return
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		done <- fmt.Errorf("received non-200 status code: %d", resp.StatusCode)
+		return
+	}
+
+	var apiResponse struct {
+		ID         string `json:"id"`
+		InterxInfo struct {
+			ChainID         string `json:"chain_id"`
+			GenesisChecksum string `json:"genesis_checksum"`
+		} `json:"interx_info"`
+		SyncInfo struct {
+			LatestBlockHeight string `json:"latest_block_height"`
+			CatchingUp        bool   `json:"catching_up"`
+		} `json:"sync_info"`
+	}
+
+	if err := json.NewDecoder(resp.Body).Decode(&apiResponse); err != nil {
+		done <- fmt.Errorf("failed to decode JSON response: %w", err)
+		return
+	}
+
+	// Create an update based on the fetched data
+	update := &Dashboard{
+		NodeID:          apiResponse.ID,
+		ChainID:         apiResponse.InterxInfo.ChainID,
+		Blocks:          apiResponse.SyncInfo.LatestBlockHeight,
+		CatchingUp:      apiResponse.SyncInfo.CatchingUp,
+		GenesisChecksum: apiResponse.InterxInfo.GenesisChecksum,
+	}
+
+	log.Info("Sending update to dashboardUpdates")
+	updates <- update
+}
+
+//	func fetchDummy(updates chan<- *Dashboard, done chan<- error) {
+//		defer func() { done <- nil }()
+//		done <- fmt.Errorf("error")
+//		updates <- &Dashboard{Key: Value}
+//	}
+func fetchIfClaimAvailable(ctx context.Context, d *Dashboard, updates chan<- *Dashboard, done chan<- error) {
+	defer func() { done <- nil }()
+	log.Debug("Evaluating if seat claim is available")
+
+	// Ensure there is data to evaluate
+	if d == nil {
+		done <- fmt.Errorf("dashboard data is nil")
+		return
+	}
+
+	// Check the specific conditions to set SeatClaimAvailable
+	claimAvailable := utils.ContainsValue(d.RoleIDs, "2") && d.Waiting && !d.CatchingUp
+
+	// Create a minimal Dashboard update just with the necessary field
+	updates <- &Dashboard{
+		SeatClaimAvailable: claimAvailable,
+	}
+}
+func fetchDateNow(updates chan<- *Dashboard, done chan<- error) {
+	defer func() { done <- nil }()
+	log.Debug("Fetching date ")
 	now := time.Now()
-	formatted := now.Format("2006-01-02 15:04:05") // Format as "YYYY-MM-DD HH:mm:ss"
-	return formatted
+	formattedDate := now.Format("2006-01-02 15:04:05")
+	updates <- &Dashboard{Date: formattedDate}
+
+}
+
+// DeepCopy creates a deep copy of the Dashboard.
+func (d *Dashboard) DeepCopy() *Dashboard {
+	clone := *d // Copy all primitive fields
+
+	// Manually copy slices to ensure they are independent
+	if d.RoleIDs != nil {
+		clone.RoleIDs = make([]string, len(d.RoleIDs))
+		copy(clone.RoleIDs, d.RoleIDs)
+	}
+
+	return &clone
+}
+
+// GetDashboardData retrieves a deep copy of the Dashboard data safely.
+func (dp *DashboardPointer) GetDashboardData() *Dashboard {
+	dp.mu.RLock()         // Acquire a read lock
+	defer dp.mu.RUnlock() // Ensure the lock is released when the function exits
+
+	return dp.Data.DeepCopy()
 }
