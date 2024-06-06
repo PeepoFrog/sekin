@@ -15,8 +15,8 @@ import (
 	"github.com/KiraCore/kensho/helper/networkparser"
 	httpexecutor "github.com/kiracore/sekin/src/shidai/internal/http_executor"
 	"github.com/kiracore/sekin/src/shidai/internal/logger"
+	sekaihelper "github.com/kiracore/sekin/src/shidai/internal/sekai_handler/sekai_helper"
 	"github.com/kiracore/sekin/src/shidai/internal/types"
-	"github.com/kiracore/sekin/src/shidai/internal/types/endpoints/sekai"
 	"github.com/kiracore/sekin/src/shidai/internal/utils"
 	"go.uber.org/zap"
 )
@@ -27,7 +27,6 @@ var (
 
 const (
 	endpointPubP2PList string = "api/pub_p2p_list?peers_only=true"
-	endpointStatus     string = "status"
 )
 
 type networkInfo struct {
@@ -98,7 +97,7 @@ func FormSekaiJoinerConfigs(tc *TargetSeedKiraConfig) error {
 }
 
 func retrieveNetworkInformation(ctx context.Context, tc *TargetSeedKiraConfig) (*networkInfo, error) {
-	statusResponse, err := getSekaidStatus(ctx, tc.IpAddress, tc.SekaidRPCPort)
+	statusResponse, err := sekaihelper.GetSekaidStatus(ctx, tc.IpAddress, tc.SekaidRPCPort)
 	if err != nil {
 		return nil, fmt.Errorf("getting sekaid status: %w", err)
 	}
@@ -159,23 +158,6 @@ func retrieveNetworkInformation(ctx context.Context, tc *TargetSeedKiraConfig) (
 		BlockHeight: statusResponse.Result.SyncInfo.LatestBlockHeight,
 		Seeds:       listOfSeeds,
 	}, nil
-}
-
-func getSekaidStatus(ctx context.Context, ipAddress, rpcPort string) (*sekai.Status, error) {
-	url := fmt.Sprintf("http://%s:%s/%s", ipAddress, rpcPort, endpointStatus)
-	client := &http.Client{}
-	body, err := httpexecutor.DoHttpQuery(ctx, client, url, "GET")
-	if err != nil {
-		return nil, err
-	}
-
-	var response *sekai.Status
-	err = json.Unmarshal(body, &response)
-	if err != nil {
-		return nil, err
-	}
-
-	return response, nil
 }
 
 // Interx p2p list
