@@ -51,11 +51,10 @@ func CheckSekaiStart(ctx context.Context) error {
 		case <-ctx.Done():
 			return ctx.Err()
 		default:
-
 			status, err := GetSekaidStatus(ctx, types.SEKAI_CONTAINER_ADDRESS, "26657")
 			if err != nil {
 				log.Warn("ERROR when getting sekai status:", zap.Error(err))
-				// return err
+				time.Sleep(time.Second)
 				continue
 			}
 			latestBlock, err := strconv.Atoi(status.Result.SyncInfo.LatestBlockHeight)
@@ -68,7 +67,6 @@ func CheckSekaiStart(ctx context.Context) error {
 			if latestBlock > 0 {
 				return nil
 			}
-			time.Sleep(time.Second)
 		}
 	}
 }
