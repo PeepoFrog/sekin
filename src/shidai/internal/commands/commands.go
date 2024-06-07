@@ -12,6 +12,7 @@ import (
 	mnemonicmanager "github.com/kiracore/sekin/src/shidai/internal/mnemonic_manager"
 	sekaihandler "github.com/kiracore/sekin/src/shidai/internal/sekai_handler"
 	configconstructor "github.com/kiracore/sekin/src/shidai/internal/sekai_handler/config_constructor"
+	sekaihelper "github.com/kiracore/sekin/src/shidai/internal/sekai_handler/sekai_helper"
 	"github.com/kiracore/sekin/src/shidai/internal/types"
 	"github.com/kiracore/sekin/src/shidai/internal/utils"
 	"go.uber.org/zap"
@@ -115,7 +116,10 @@ func handleJoinCommand(args map[string]interface{}) (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("unable to start sekai: %w", err)
 	}
-
+	err = sekaihelper.CheckSekaiStart(ctx)
+	if err != nil {
+		return "", err
+	}
 	err = interxhandler.InitInterx(ctx, masterMnemonic)
 	if err != nil {
 		return "", fmt.Errorf("unable to init interx: %w", err)
