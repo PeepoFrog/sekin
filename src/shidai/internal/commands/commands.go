@@ -43,6 +43,7 @@ var (
 		"join":   handleJoinCommand,
 		"status": handleStatusCommand,
 		"start":  handleStartComamnd,
+		"tx":     handleTxCommand,
 	}
 )
 
@@ -68,6 +69,14 @@ func ExecuteCommandHandler(c *gin.Context) {
 }
 
 // [COMMANDS] //
+
+func handleTxCommand(args map[string]interface{}) (string, error) {
+	cmd, ok := args["tx"].(string)
+	if !ok {
+		return "", types, ErrInvalidOrMissingTx
+	}
+	return "", nil
+}
 
 // handleJoinCommand processes the "join" command
 func handleJoinCommand(args map[string]interface{}) (string, error) {
