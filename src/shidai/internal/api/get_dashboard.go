@@ -476,7 +476,7 @@ func fetchNodeStatus(ctx context.Context, updates chan<- *Dashboard, done chan<-
 		done <- fmt.Errorf("failed to decode JSON response: %w", err)
 		return
 	}
-
+	log.Debug("Parsed CatchingUp status", zap.Bool("CatchingUp: ", apiResponse.SyncInfo.CatchingUp))
 	// Create an update based on the fetched data
 	update := &Dashboard{
 		NodeID:          apiResponse.ID,
