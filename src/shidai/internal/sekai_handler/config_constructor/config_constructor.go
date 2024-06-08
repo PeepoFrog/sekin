@@ -95,15 +95,19 @@ func FormSekaiJoinerConfigs(tc *TargetSeedKiraConfig) error {
 	}
 	return nil
 }
-
 func retrieveNetworkInformation(ctx context.Context, tc *TargetSeedKiraConfig) (*networkInfo, error) {
+	log.Info("Retrieving Sekai network information", zap.String("IP", tc.IpAddress), zap.String("port", tc.SekaidRPCPort))
 	statusResponse, err := sekaihelper.GetSekaidStatus(ctx, tc.IpAddress, tc.SekaidRPCPort)
+
 	if err != nil {
-		return nil, fmt.Errorf("getting sekaid status: %w", err)
+		log.Error("Failed to get Sekaid status", zap.Error(err))
+		return nil, fmt.Errorf("getting Sekaid status: %w", err)
 	}
 
+	// Parse all peers in the network
 	nodes, _, err := networkparser.GetAllNodesV3(ctx, tc.IpAddress, 3, false)
 	if err != nil {
+		log.Error("Failed to parse peers", zap.Error(err))
 		return nil, fmt.Errorf("unable to parse peers: %w", err)
 	}
 
@@ -111,47 +115,44 @@ func retrieveNetworkInformation(ctx context.Context, tc *TargetSeedKiraConfig) (
 	var wg sync.WaitGroup
 	var listOfSeeds []string
 
+	// Process each node to retrieve and parse public P2P list
 	for _, node := range nodes {
 		wg.Add(1)
 		go func(n networkparser.Node) {
 			defer wg.Done()
 			pupP2PListResponse, err := getPubP2PList(ctx, n.IP, "11000")
 			if err != nil {
-				zap.L().Debug("getting sekaid public P2P list:", zap.Error(err))
+				log.Debug("Failed to get public P2P list", zap.String("IP", n.IP), zap.Error(err))
 				return
 			}
 			local, err := parsePubP2PListResponse(pupP2PListResponse)
 			if err != nil {
-				zap.L().Debug("parsing sekaid public P2P list", zap.Error(err))
+				log.Debug("Failed to parse public P2P list response", zap.String("IP", n.IP), zap.Error(err))
 				return
 			}
+
+			// Synchronize the addition of new seeds
 			mu.Lock()
 			for _, s := range local {
-				exist := false
-				for _, ss := range listOfSeeds {
-					if s == ss {
-						exist = true
-						// zap.L().Debug("already exist", zap.String("IP", ss))
-						log.Info("already exist", zap.String("IP", ss))
-						break
-					}
-				}
-				if !exist {
-					zap.L().Debug("adding peer", zap.String("IP", s))
+				if !utils.ContainsValue(listOfSeeds, s) {
+					log.Debug("Adding new seed", zap.String("IP", s))
 					listOfSeeds = append(listOfSeeds, s)
+				} else {
+					log.Info("Seed already exists", zap.String("IP", s))
 				}
 			}
 			mu.Unlock()
 		}(node)
-
 	}
 	wg.Wait()
 
+	// Handle case where no seeds are found
 	if len(listOfSeeds) == 0 {
-		zap.L().Debug("ERROR: List of seeds is empty, the trusted seed will be used")
+		log.Warn("No seeds found; using trusted seed", zap.String("nodeID", statusResponse.Result.NodeInfo.ID), zap.String("IP", tc.IpAddress), zap.String("P2PPort", tc.SekaidP2PPort))
 		listOfSeeds = []string{fmt.Sprintf("tcp://%s@%s:%s", statusResponse.Result.NodeInfo.ID, tc.IpAddress, tc.SekaidP2PPort)}
 	}
-	zap.L().Debug("LIST OF seeds ==================================== ", zap.Strings("listOfSeeds", listOfSeeds))
+
+	log.Info("Completed retrieval of network information", zap.Strings("listOfSeeds", listOfSeeds))
 	return &networkInfo{
 		NetworkName: statusResponse.Result.NodeInfo.Network,
 		NodeID:      statusResponse.Result.NodeInfo.ID,

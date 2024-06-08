@@ -28,6 +28,35 @@ SEKIN_DIR="$KM_DIR/sekin"
 COMPOSE_URL="https://raw.githubusercontent.com/KiraCore/sekin/main/compose.yml"
 COMPOSE_PATH="/home/km/sekin/compose.yml"
 
+# DEPLOY
+SEKAI_VER=""
+INTERX_VER=""
+
+for arg in "$@"; do
+    case $arg in
+        --sekai=*)
+        SEKAI_VER="${arg#*=}"
+        shift
+        ;;
+        --interx=*)
+        INTERX_VER="${arg#*=}"
+        shift
+        ;;
+    esac
+done
+
+# Validate the version format and existence, warn if not provided or incorrect
+if [[ -z "$SEKAI_VER" || ! $SEKAI_VER =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+    echo "Warning: Invalid or missing SEKAI version. Continuing with default or previously set version."
+fi
+
+if [[ -z "$INTERX_VER" || ! $INTERX_VER =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+    echo "Warning: Invalid or missing INTERX version. Continuing with default or previously set version."
+fi
+
+echo "Using SEKAI version: $SEKAI_VER"
+echo "Using INTERX version: $INTERX_VER"
+
 # Function to update system
 update_system() {
     echo "Updating system..."
@@ -219,6 +248,35 @@ clone_repo_as_km() {
     fi
 }
 
+update_services_versions() {
+    local compose_path="$COMPOSE_PATH"
+    local sekai_ver="$SEKAI_VER"
+    local interx_ver="$INTERX_VER"
+
+    # Check if the compose file exists
+    if [ ! -f "$compose_path" ]; then
+        echo "Compose file does not exist at the specified path: $compose_path"
+        return 1
+    fi
+
+    # Check and update SEKAI version if provided and not empty
+    if [[ -n "$sekai_ver" && $sekai_ver =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+        sed -i "s|ghcr.io/kiracore/sekin/sekai:v[0-9.]*|ghcr.io/kiracore/sekin/sekai:$sekai_ver|g" "$compose_path"
+        echo "Updated SEKAI version to $sekai_ver in $compose_path"
+    else
+        echo "No valid SEKAI version provided, skipping update."
+    fi
+
+    # Check and update INTERX version if provided and not empty
+    if [[ -n "$interx_ver" && $interx_ver =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+        sed -i "s|ghcr.io/kiracore/sekin/interx:v[0-9.]*|ghcr.io/kiracore/sekin/interx:$interx_ver|g" "$compose_path"
+        echo "Updated INTERX version to $interx_ver in $compose_path"
+    else
+        echo "No valid INTERX version provided, skipping update."
+    fi
+
+}
+
 main() {
     update_system
     install_prerequisites
@@ -227,6 +285,7 @@ main() {
     add_user_km
     add_km_to_docker_group
     download_compose_and_change_owner
+    update_services_versions
     # clone_repo_as_km
     run_docker_compose_as_km
 }

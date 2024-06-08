@@ -1,6 +1,7 @@
 package utils
 
 import (
+	"crypto/rand"
 	"fmt"
 	"net"
 	"os"
@@ -223,4 +224,17 @@ func CheckInfra(infra types.InfraFiles) bool {
 	}
 
 	return true && check
+}
+
+func GenerateRandomString(n int) string {
+	const lettersAndDigits = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
+	b := make([]byte, n)
+	_, err := rand.Read(b)
+	if err != nil {
+		log.Fatalf("Failed to generate random string: %v", err)
+	}
+	for i := 0; i < n; i++ {
+		b[i] = lettersAndDigits[b[i]%byte(len(lettersAndDigits))]
+	}
+	return string(b)
 }

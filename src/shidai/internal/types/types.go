@@ -264,6 +264,8 @@ const (
 	InvalidOrMissingRPCPort    = "invalid or missing RPC port"
 	InvalidOrMissingInterxPort = "invalid or missing interx port"
 
+	InvalidOrMissingTx = "invalid or missing tx"
+
 	FilePermRO os.FileMode = 0444
 	FilePermRW os.FileMode = 0644
 	FilePermEX os.FileMode = 0755
@@ -275,6 +277,8 @@ const (
 var (
 	ErrInvalidOrMissingMnemonic = errors.New(InvalidOrMissingMnemonic)
 	ErrInvalidOrMissingIP       = errors.New(InvalidOrMissingIP)
+
+	ErrInvalidOrMissingTx = errors.New(InvalidOrMissingTx)
 
 	ErrInvalidOrMissingP2PPort    = errors.New(InvalidOrMissingP2PPort)
 	ErrInvalidOrMissingRPCPort    = errors.New(InvalidOrMissingRPCPort)

@@ -7,6 +7,7 @@ import (
 	"os"
 	"strconv"
 
+	"github.com/kiracore/sekin/src/shidai/internal/docker"
 	interxhandler "github.com/kiracore/sekin/src/shidai/internal/interx_handler"
 	interxhelper "github.com/kiracore/sekin/src/shidai/internal/interx_handler/interx_helper"
 	"github.com/kiracore/sekin/src/shidai/internal/logger"
@@ -43,6 +44,7 @@ var (
 		"join":   handleJoinCommand,
 		"status": handleStatusCommand,
 		"start":  handleStartComamnd,
+		"tx":     handleTxCommand,
 	}
 )
 
@@ -68,6 +70,54 @@ func ExecuteCommandHandler(c *gin.Context) {
 }
 
 // [COMMANDS] //
+func handleTxCommand(args map[string]interface{}) (string, error) {
+	cmd, ok := args["tx"].(string)
+	if !ok {
+		log.Error("Transaction command is missing or not a string")
+		return "", types.ErrInvalidOrMissingTx
+	}
+
+	cm, err := docker.NewContainerManager()
+	if err != nil {
+		log.Error("Failed to initialize Docker API", zap.Error(err))
+		return "", fmt.Errorf("failed to initialize docker API: %w", err)
+	}
+
+	ctx := context.Background()
+	containerID := types.SEKAI_CONTAINER_ID
+	var command []string
+
+	if cmd == "claim_seat" {
+		moniker, ok := args["moniker"].(string)
+		if !ok {
+			moniker = utils.GenerateRandomString(8)
+			log.Warn("Moniker was not provided. Generated randomly.", zap.String("moniker", moniker))
+		}
+		args["moniker"] = moniker
+	}
+
+	switch cmd {
+	case "activate":
+		command = []string{"sekaid", "tx", "customslashing", "activate", "--from", "validator", "--keyring-backend", "test", "--home", "$SEKAID_HOME", "--chain-id", "$NETWORK_NAME", "--fees", "1000ukex", "--gas", "1000000", "--node", "tcp://sekai.local:26657", "--broadcast-mode", "async", "--yes"}
+	case "pause", "upause":
+		action := map[string]string{"pause": "inactivate", "upause": "unpause"}[cmd]
+		command = []string{"sekaid", "tx", "customslashing", action, "--from", "validator", "--keyring-backend", "test", "--home", "/sekai", "--chain-id", "$NETWORK_NAME", "--fees", "1000ukex", "--gas", "1000000", "--node", "tcp://sekai.local:26657", "--broadcast-mode", "async", "--yes"}
+	case "claim_seat":
+		command = []string{"sekaid", "tx", "customstaking", "claim-validator-seat", "--from", "validator", "--keyring-backend", "test", "--home", "/sekai", "--moniker", args["moniker"].(string), "--chain-id", "$NETWORK_NAME", "--gas", "1000000", "--node", "tcp://sekai.local:26657", "--broadcast-mode", "async", "--fees", "100ukex", "--yes"}
+	default:
+		log.Error("Unsupported transaction command", zap.String("command", cmd))
+		return "", fmt.Errorf("unsupported action: %s", cmd)
+	}
+
+	_, err = cm.ExecInContainer(ctx, containerID, command)
+	if err != nil {
+		log.Error("Failed to execute transaction command", zap.String("command", cmd), zap.Error(err))
+		return "", fmt.Errorf("failed to execute transaction command: %w", err)
+	}
+
+	log.Info("Transaction command executed successfully", zap.String("command", cmd))
+	return "Transaction executed successfully", nil
+}
 
 // handleJoinCommand processes the "join" command
 func handleJoinCommand(args map[string]interface{}) (string, error) {
