@@ -8,6 +8,7 @@ import (
 	"strconv"
 
 	interxhandler "github.com/kiracore/sekin/src/shidai/internal/interx_handler"
+	interxhelper "github.com/kiracore/sekin/src/shidai/internal/interx_handler/interx_helper"
 	"github.com/kiracore/sekin/src/shidai/internal/logger"
 	mnemonicmanager "github.com/kiracore/sekin/src/shidai/internal/mnemonic_manager"
 	sekaihandler "github.com/kiracore/sekin/src/shidai/internal/sekai_handler"
@@ -41,6 +42,7 @@ var (
 	CommandHandlers             = map[string]HandlerFunc{
 		"join":   handleJoinCommand,
 		"status": handleStatusCommand,
+		"start":  handleStartComamnd,
 	}
 )
 
@@ -128,6 +130,10 @@ func handleJoinCommand(args map[string]interface{}) (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("unable to start interx: %w", err)
 	}
+	err = interxhelper.CheckInterxStart(ctx)
+	if err != nil {
+		return "", err
+	}
 	// Example of using the IP, and similar for other fields
 	// This function would contain the logic specific to handling a join command
 	return fmt.Sprintf("Join command processed for IP: %s", ip), nil
@@ -142,4 +148,27 @@ func handleStatusCommand(args map[string]interface{}) (string, error) {
 	// 5.
 
 	return "", nil
+}
+
+func handleStartComamnd(args map[string]interface{}) (string, error) {
+	err := sekaihandler.StartSekai()
+	if err != nil {
+		return "", fmt.Errorf("unable to start sekai: %w", err)
+	}
+	ctx := context.Background()
+
+	err = sekaihelper.CheckSekaiStart(ctx)
+	if err != nil {
+		return "", err
+	}
+
+	err = interxhandler.StartInterx()
+	if err != nil {
+		return "", fmt.Errorf("unable to start interx: %w", err)
+	}
+	err = interxhelper.CheckInterxStart(ctx)
+	if err != nil {
+		return "", err
+	}
+	return "Sekai and Interx started successfully", nil
 }
