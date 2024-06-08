@@ -231,7 +231,7 @@ func GenerateRandomString(n int) string {
 	b := make([]byte, n)
 	_, err := rand.Read(b)
 	if err != nil {
-		log.Fatalf("Failed to generate random string: %v", err)
+		log.Error("Failed to generate random string", zap.Error(err))
 	}
 	for i := 0; i < n; i++ {
 		b[i] = lettersAndDigits[b[i]%byte(len(lettersAndDigits))]
