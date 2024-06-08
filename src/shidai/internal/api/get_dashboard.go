@@ -74,9 +74,16 @@ func NewDashboardPointer() *DashboardPointer {
 			ValidatorAddress:    "Unknown",
 			ChainID:             "Unknown",
 			NodeID:              "Unknown",
-			RoleIDs:             []string{"Unknown"},
-			SeatClaimAvailable:  false,
 			GenesisChecksum:     "Unknown",
+			RoleIDs:             []string{"Unknown"},
+			ActiveValidators:    0,
+			PausedValidators:    0,
+			InactiveValidators:  0,
+			JailedValidators:    0,
+			WaitingValidators:   0,
+			SeatClaimAvailable:  false,
+			Waiting:             false,
+			CatchingUp:          false,
 		},
 	}
 }
