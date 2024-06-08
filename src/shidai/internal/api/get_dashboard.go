@@ -278,9 +278,26 @@ func applyUpdate(pointer *DashboardPointer, update *Dashboard) {
 	if update.Waiting {
 		pointer.Data.Waiting = update.Waiting
 	}
-	if update.CatchingUp {
+	if update.CatchingUp || pointer.Data.CatchingUp {
 
 		pointer.Data.CatchingUp = update.CatchingUp
+	}
+	if update.ActiveValidators != 0 && update.ActiveValidators != pointer.Data.ActiveValidators {
+		pointer.Data.ActiveValidators = update.ActiveValidators
+	}
+
+	if update.PausedValidators != 0 && update.PausedValidators != pointer.Data.PausedValidators {
+		pointer.Data.PausedValidators = update.PausedValidators
+	}
+
+	if update.InactiveValidators != 0 && update.InactiveValidators != pointer.Data.InactiveValidators {
+		pointer.Data.InactiveValidators = update.InactiveValidators
+	}
+	if update.JailedValidators != 0 && update.JailedValidators != pointer.Data.JailedValidators {
+		pointer.Data.JailedValidators = update.JailedValidators
+	}
+	if update.WaitingValidators != 0 && update.WaitingValidators != pointer.Data.WaitingValidators {
+		pointer.Data.WaitingValidators = update.WaitingValidators
 	}
 
 }
