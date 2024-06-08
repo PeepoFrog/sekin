@@ -111,9 +111,14 @@ func getSekaidGenesis(ctx context.Context, ipAddress, sekaidRPCport string) ([]b
 		log.Debug("Appended genesis chunk", zap.Int64("chunk", chunkCount))
 
 		// Increment the chunk count and check if we've received all chunks
+
+		totalValue, err := response.Result.Total.Int64()
+		if err != nil {
+			return nil, err
+		}
 		chunkCount++
-		if chunkCount >= response.Result.Total.Int64() {
-			log.Info("All genesis chunks received", zap.Int64("total_chunks", response.Result.Total.Int64()))
+		if chunkCount >= totalValue {
+			log.Info("All genesis chunks received", zap.Int64("total_chunks", totalValue))
 			break
 		}
 	}
@@ -197,6 +202,14 @@ func getGenSum(ctx context.Context, ipAddress, interxPort string) (string, error
 	return trimmedChecksum, nil
 }
 
+type StringPrefixError struct {
+	StringValue string
+	Prefix      string
+}
+
+func (e *StringPrefixError) Error() string {
+	return fmt.Sprintf("string '%s' does not have prefix '%s'", e.StringValue, e.Prefix)
+}
 func trimPrefix(s, prefix string) (string, error) {
 	if !strings.HasPrefix(s, prefix) {
 		log.Debug("String does not have the expected prefix", zap.String("string", s), zap.String("prefix", prefix))
