@@ -272,9 +272,16 @@ func applyUpdate(pointer *DashboardPointer, update *Dashboard) {
 	if update.GenesisChecksum != "Unknown" && update.GenesisChecksum != "" {
 		pointer.Data.GenesisChecksum = update.GenesisChecksum
 	}
-	pointer.Data.SeatClaimAvailable = update.SeatClaimAvailable
-	pointer.Data.Waiting = update.Waiting
-	pointer.Data.CatchingUp = update.CatchingUp
+	if update.SeatClaimAvailable {
+		pointer.Data.SeatClaimAvailable = update.SeatClaimAvailable
+	}
+	if update.Waiting {
+		pointer.Data.Waiting = update.Waiting
+	}
+	if update.CatchingUp {
+
+		pointer.Data.CatchingUp = update.CatchingUp
+	}
 
 }
 
