@@ -213,7 +213,6 @@ func updateDashboard() error {
 	var (
 		catchingUpFinal         bool = false // Finale state if node is catching up or not after all updates
 		waitingFinal            bool = false
-		seatClaiAvailableFinal  bool = false
 		activeValidatorsFinal   int  = 0
 		pausedValidatorsFinal   int  = 0
 		inactiveValidatorsFinal int  = 0
