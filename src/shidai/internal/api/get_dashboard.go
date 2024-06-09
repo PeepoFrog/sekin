@@ -280,7 +280,9 @@ func applyUpdate(pointer *DashboardPointer, update *Dashboard) {
 	}
 	if update.CatchingUp || pointer.Data.CatchingUp {
 
-		pointer.Data.CatchingUp = update.CatchingUp
+		pointer.Data.CatchingUp = true
+	} else {
+		pointer.Data.CatchingUp = false
 	}
 	if update.ActiveValidators != 0 {
 		pointer.Data.ActiveValidators = update.ActiveValidators
