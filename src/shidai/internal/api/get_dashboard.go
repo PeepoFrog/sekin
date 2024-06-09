@@ -210,9 +210,24 @@ func updateDashboard() error {
 		}
 	}
 
+	var (
+		catchingUpFinal bool = false // Finale state if node is catching up or not after all updates
+		waitingFinal    bool = false
+	)
 	for update := range dashboardUpdates {
-		applyUpdate(dashboardPointer, update) // Apply updates to the central dashboardPointer
+		applyUpdate(dashboardPointer, update)
+		if update.CatchingUp {
+			catchingUpFinal = true
+		}
+		if update.Waiting {
+			waitingFinal = true
+		}
 	}
+
+	dashboardPointer.mu.Lock()
+	dashboardPointer.Data.CatchingUp = catchingUpFinal
+	dashboardPointer.Data.Waiting = waitingFinal
+	dashboardPointer.mu.Unlock()
 
 	return nil
 }
@@ -275,15 +290,7 @@ func applyUpdate(pointer *DashboardPointer, update *Dashboard) {
 	if update.SeatClaimAvailable {
 		pointer.Data.SeatClaimAvailable = update.SeatClaimAvailable
 	}
-	if update.Waiting {
-		pointer.Data.Waiting = update.Waiting
-	}
-	if update.CatchingUp || pointer.Data.CatchingUp {
 
-		pointer.Data.CatchingUp = true
-	} else {
-		pointer.Data.CatchingUp = false
-	}
 	if update.ActiveValidators != 0 {
 		pointer.Data.ActiveValidators = update.ActiveValidators
 	}
