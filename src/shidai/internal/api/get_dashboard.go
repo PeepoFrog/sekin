@@ -278,9 +278,26 @@ func applyUpdate(pointer *DashboardPointer, update *Dashboard) {
 	if update.Waiting {
 		pointer.Data.Waiting = update.Waiting
 	}
-	if update.CatchingUp {
+	if update.CatchingUp || pointer.Data.CatchingUp {
 
 		pointer.Data.CatchingUp = update.CatchingUp
+	}
+	if update.ActiveValidators != 0 {
+		pointer.Data.ActiveValidators = update.ActiveValidators
+	}
+
+	if update.PausedValidators != 0 {
+		pointer.Data.PausedValidators = update.PausedValidators
+	}
+
+	if update.InactiveValidators != 0 {
+		pointer.Data.InactiveValidators = update.InactiveValidators
+	}
+	if update.JailedValidators != 0 {
+		pointer.Data.JailedValidators = update.JailedValidators
+	}
+	if update.WaitingValidators != 0 {
+		pointer.Data.WaitingValidators = update.WaitingValidators
 	}
 
 }
@@ -443,7 +460,7 @@ func fetchValidatorsStatus(ctx context.Context, address string, updates chan<- *
 	// Check if the provided address is in the waiting list
 	for _, waitingAddress := range apiResponse.Waiting {
 		if waitingAddress == address {
-			update.SeatClaimAvailable = true
+			update.Waiting = true
 			break
 		}
 	}
