@@ -211,8 +211,14 @@ func updateDashboard() error {
 	}
 
 	var (
-		catchingUpFinal bool = false // Finale state if node is catching up or not after all updates
-		waitingFinal    bool = false
+		catchingUpFinal         bool = false // Finale state if node is catching up or not after all updates
+		waitingFinal            bool = false
+		seatClaiAvailableFinal  bool = false
+		activeValidatorsFinal   int  = 0
+		pausedValidatorsFinal   int  = 0
+		inactiveValidatorsFinal int  = 0
+		jailedValidatorsFinal   int  = 0
+		waitingValidatorsFinal  int  = 0
 	)
 	for update := range dashboardUpdates {
 		applyUpdate(dashboardPointer, update)
@@ -222,11 +228,32 @@ func updateDashboard() error {
 		if update.Waiting {
 			waitingFinal = true
 		}
+		if update.ActiveValidators != 0 {
+			activeValidatorsFinal = update.ActiveValidators
+		}
+		if update.PausedValidators != 0 {
+			pausedValidatorsFinal = update.PausedValidators
+		}
+		if update.InactiveValidators != 0 {
+			inactiveValidatorsFinal = update.InactiveValidators
+		}
+		if update.JailedValidators != 0 {
+			jailedValidatorsFinal = update.JailedValidators
+		}
+		if update.WaitingValidators != 0 {
+			waitingValidatorsFinal = update.WaitingValidators
+		}
 	}
 
 	dashboardPointer.mu.Lock()
 	dashboardPointer.Data.CatchingUp = catchingUpFinal
 	dashboardPointer.Data.Waiting = waitingFinal
+	dashboardPointer.Data.ActiveValidators = activeValidatorsFinal
+	dashboardPointer.Data.PausedValidators = pausedValidatorsFinal
+	dashboardPointer.Data.InactiveValidators = inactiveValidatorsFinal
+	dashboardPointer.Data.JailedValidators = jailedValidatorsFinal
+	dashboardPointer.Data.WaitingValidators = waitingValidatorsFinal
+	dashboardPointer.Data.SeatClaimAvailable = utils.ContainsValue(dashboardPointer.Data.RoleIDs, "2") && !dashboardPointer.Data.CatchingUp && dashboardPointer.Data.Waiting
 	dashboardPointer.mu.Unlock()
 
 	return nil
@@ -281,34 +308,12 @@ func applyUpdate(pointer *DashboardPointer, update *Dashboard) {
 	if update.NodeID != "Unknown" && update.NodeID != "" {
 		pointer.Data.NodeID = update.NodeID
 	}
-	if len(update.RoleIDs) > 0 && update.RoleIDs[0] != "Unknown" {
+	if len(update.RoleIDs) > 0 && !utils.ContainsValue(update.RoleIDs, "Unknown") {
 		pointer.Data.RoleIDs = update.RoleIDs
 	}
 	if update.GenesisChecksum != "Unknown" && update.GenesisChecksum != "" {
 		pointer.Data.GenesisChecksum = update.GenesisChecksum
 	}
-	if update.SeatClaimAvailable {
-		pointer.Data.SeatClaimAvailable = update.SeatClaimAvailable
-	}
-
-	if update.ActiveValidators != 0 {
-		pointer.Data.ActiveValidators = update.ActiveValidators
-	}
-
-	if update.PausedValidators != 0 {
-		pointer.Data.PausedValidators = update.PausedValidators
-	}
-
-	if update.InactiveValidators != 0 {
-		pointer.Data.InactiveValidators = update.InactiveValidators
-	}
-	if update.JailedValidators != 0 {
-		pointer.Data.JailedValidators = update.JailedValidators
-	}
-	if update.WaitingValidators != 0 {
-		pointer.Data.WaitingValidators = update.WaitingValidators
-	}
-
 }
 
 func fetchRoleIDsFromSekaidBin(ctx context.Context, cm *docker.ContainerManager, containerID, adr string, updates chan<- *Dashboard, done chan<- error) {
@@ -528,24 +533,6 @@ func fetchNodeStatus(ctx context.Context, updates chan<- *Dashboard, done chan<-
 //		done <- fmt.Errorf("error")
 //		updates <- &Dashboard{Key: Value}
 //	}
-func fetchIfClaimAvailable(ctx context.Context, d *Dashboard, updates chan<- *Dashboard, done chan<- error) {
-	defer func() { done <- nil }()
-	log.Debug("Evaluating if seat claim is available")
-
-	// Ensure there is data to evaluate
-	if d == nil {
-		done <- fmt.Errorf("dashboard data is nil")
-		return
-	}
-
-	// Check the specific conditions to set SeatClaimAvailable
-	claimAvailable := utils.ContainsValue(d.RoleIDs, "2") && d.Waiting && !d.CatchingUp
-
-	// Create a minimal Dashboard update just with the necessary field
-	updates <- &Dashboard{
-		SeatClaimAvailable: claimAvailable,
-	}
-}
 func fetchDateNow(updates chan<- *Dashboard, done chan<- error) {
 	defer func() { done <- nil }()
 	log.Debug("Fetching date ")
