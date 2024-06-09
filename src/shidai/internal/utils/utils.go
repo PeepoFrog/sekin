@@ -2,8 +2,11 @@ package utils
 
 import (
 	"crypto/rand"
+	"encoding/json"
 	"fmt"
+	"io"
 	"net"
+	"net/http"
 	"os"
 	"reflect"
 	"regexp"
@@ -237,4 +240,49 @@ func GenerateRandomString(n int) string {
 		b[i] = lettersAndDigits[b[i]%byte(len(lettersAndDigits))]
 	}
 	return string(b)
+}
+
+// GetChainID fetches and parses the chain_id from a predefined URL
+func GetChainID(url string) (string, error) {
+	// Define the type locally within the function
+	type DashboardData struct {
+		ChainID string `json:"chain_id"`
+	}
+
+	log.Debug("Sending GET request to URL", zap.String("url", url))
+
+	// Send a GET request to the URL
+	resp, err := http.Get(url)
+	if err != nil {
+		log.Error("Failed to fetch data", zap.Error(err))
+		return "", fmt.Errorf("error fetching data: %w", err)
+	}
+	defer resp.Body.Close()
+	log.Debug("Received response from server")
+
+	// Read the response body
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		log.Error("Failed to read response body", zap.Error(err))
+		return "", fmt.Errorf("error reading response body: %w", err)
+	}
+	log.Debug("Response body read successfully", zap.ByteString("body", body))
+
+	// Parse the JSON data
+	var data DashboardData
+	if err := json.Unmarshal(body, &data); err != nil {
+		log.Error("Failed to parse JSON", zap.Error(err))
+		return "", fmt.Errorf("error parsing JSON: %w", err)
+	}
+	log.Debug("JSON parsed successfully", zap.String("chain_id", data.ChainID))
+
+	// Check if the chain_id is empty, which could indicate missing data
+	if data.ChainID == "" {
+		log.Warn("Chain ID is missing in the response")
+		return "", fmt.Errorf("chain_id is missing in the response")
+	}
+
+	log.Info("Successfully retrieved chain ID", zap.String("chain_id", data.ChainID))
+	// Return the chain_id
+	return data.ChainID, nil
 }
