@@ -67,6 +67,7 @@ services:
     build:
       context: ./
       dockerfile: syslog-ng.Dockerfile
+    command: ["syslog-ng", "-F", "-c", "/run/syslog-ng.ctl"]
     restart: always
     healthcheck:
       test: ["CMD", "pgrep", "syslog-ng"]

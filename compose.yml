@@ -64,6 +64,7 @@ services:
   syslog-ng:
     image: ghcr.io/kiracore/sekin/syslog-ng:v0.8.11
     restart: always
+    command: ["syslog-ng", "-F", "-c", "/run/syslog-ng.ctl"]
     healthcheck:
       test: ["CMD", "pgrep", "syslog-ng"]
       interval: 10s
