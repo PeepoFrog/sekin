@@ -17,4 +17,4 @@ RUN chown root:root /etc/logrotate.d/logrotate.conf && \
 
 RUN crontab /etc/crontabs/cron_logrotate
 
-CMD ["/usr/sbin/syslog-ng","-F","-f","/etc/syslog-ng/syslog-ng.conf","--persist-file","/config/syslog-ng.persist","--pidfile","/config/syslog-ng.pid","-c","/run/syslog-ng.ctl", "--stderr", "--no-caps"]
+CMD ["/usr/sbin/syslog-ng","-F","-f","/etc/syslog-ng/syslog-ng.conf","--persist-file","/run/syslog-ng.persist","--pidfile","/run/syslog-ng.pid","-c","/run/syslog-ng.ctl", "--stderr", "--no-caps"]

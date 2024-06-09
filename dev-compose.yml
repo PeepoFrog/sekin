@@ -21,7 +21,8 @@ services:
       - "127.0.0.1:8080:8080"             # RPC scaller
 
     networks:
-      - kiranet
+      kiranet:
+        ipv4_address: 10.1.0.3
     hostname: sekai.local
 
   interx:
@@ -41,7 +42,8 @@ services:
       - "11000:11000"
       - "127.0.0.1:8081:8081"
     networks:
-      - kiranet
+      kiranet:
+        ipv4_address: 10.1.0.4
     hostname: interx.local
 
   shidai:
@@ -60,7 +62,8 @@ services:
       - /var/run/docker.sock:/var/run/docker.sock
       - ./shidai:/shidaid
     networks:
-      - kiranet
+      kiranet:
+        ipv4_address: 10.1.0.5
     hostname: shidai.local
 
   syslog-ng:
