@@ -254,6 +254,7 @@ const (
 	InterxLogPath = "/syslog-data/syslog-ng/logs/interx.log"
 
 	DashboardPath = "/shidaid/dashboard_cache.json"
+	DashboardUrl  = "http://127.0.0.1:8282/dashboard"
 
 	InvalidOrMissingMnemonic  = "invalid or missing mnemonic"
 	InvalidOrMissingIP        = "invalid or missing IP"

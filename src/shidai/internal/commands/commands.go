@@ -83,6 +83,12 @@ func handleTxCommand(args map[string]interface{}) (string, error) {
 		return "", fmt.Errorf("failed to initialize docker API: %w", err)
 	}
 
+	chainID, err := utils.GetChainID(types.DashboardUrl)
+	if err != nil {
+		log.Error("Failed to obtain chain id", zap.Error(err))
+		return "", fmt.Errorf("failed to obtain chain id: %w", err)
+	}
+
 	ctx := context.Background()
 	containerID := types.SEKAI_CONTAINER_ID
 	var command []string
@@ -97,13 +103,18 @@ func handleTxCommand(args map[string]interface{}) (string, error) {
 	}
 
 	switch cmd {
-	case "activate":
-		command = []string{"sekaid", "tx", "customslashing", "activate", "--from", "validator", "--keyring-backend", "test", "--home", "$SEKAID_HOME", "--chain-id", "$NETWORK_NAME", "--fees", "1000ukex", "--gas", "1000000", "--node", "tcp://sekai.local:26657", "--broadcast-mode", "async", "--yes"}
-	case "pause", "upause":
-		action := map[string]string{"pause": "inactivate", "upause": "unpause"}[cmd]
-		command = []string{"sekaid", "tx", "customslashing", action, "--from", "validator", "--keyring-backend", "test", "--home", "/sekai", "--chain-id", "$NETWORK_NAME", "--fees", "1000ukex", "--gas", "1000000", "--node", "tcp://sekai.local:26657", "--broadcast-mode", "async", "--yes"}
-	case "claim_seat":
-		command = []string{"sekaid", "tx", "customstaking", "claim-validator-seat", "--from", "validator", "--keyring-backend", "test", "--home", "/sekai", "--moniker", args["moniker"].(string), "--chain-id", "$NETWORK_NAME", "--gas", "1000000", "--node", "tcp://sekai.local:26657", "--broadcast-mode", "async", "--fees", "100ukex", "--yes"}
+
+	case "activate": // ACTIVATE
+		command = []string{"sekaid", "tx", "customslashing", "activate", "--from", "validator", "--keyring-backend", "test", "--home", "/sekai", "--chain-id", chainID, "--fees", "1000ukex", "--gas", "1000000", "--node", "tcp://sekai.local:26657", "--broadcast-mode", "async", "--yes"}
+
+	case "pause": // PAUSE
+		command = []string{"sekaid", "tx", "customslashing", "pause", "--from", "validator", "--keyring-backend", "test", "--home", "/sekai", "--chain-id", chainID, "--fees", "1000ukex", "--gas", "1000000", "--node", "tcp://sekai.local:26657", "--broadcast-mode", "async", "--yes"}
+
+	case "unpause": // UNPAUSE
+		command = []string{"sekaid", "tx", "customslashing", "unpause", "--from", "validator", "--keyring-backend", "test", "--home", "/sekai", "--chain-id", chainID, "--fees", "1000ukex", "--gas", "1000000", "--node", "tcp://sekai.local:26657", "--broadcast-mode", "async", "--yes"}
+
+	case "claim_seat": // CLAIM SEAT
+		command = []string{"sekaid", "tx", "customstaking", "claim-validator-seat", "--from", "validator", "--keyring-backend", "test", "--home", "/sekai", "--moniker", args["moniker"].(string), "--chain-id", chainID, "--gas", "1000000", "--node", "tcp://sekai.local:26657", "--broadcast-mode", "async", "--fees", "100ukex", "--yes"}
 	default:
 		log.Error("Unsupported transaction command", zap.String("command", cmd))
 		return "", fmt.Errorf("unsupported action: %s", cmd)
