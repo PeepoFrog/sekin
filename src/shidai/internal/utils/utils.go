@@ -213,22 +213,23 @@ func SetField(obj interface{}, fieldName string, newValue interface{}) (string, 
 }
 
 func CheckInfra(infra types.InfraFiles) bool {
-	var check bool = false
+	allFilesPresent := true // Assume all files are present initially
+
 	for _, path := range infra {
 		if !FileExists(path) {
 			log.Warn("Infrastructure file not found", zap.String("path", path))
-			check = false
+			allFilesPresent = false // Set to false if any file is missing
 		}
 	}
-	if check {
+
+	if allFilesPresent {
 		log.Info("All infrastructure files are present")
 	} else {
 		log.Info("Not all infrastructure files are present")
 	}
 
-	return true && check
+	return allFilesPresent // Return true if all files are present, false otherwise
 }
-
 func GenerateRandomString(n int) string {
 	const lettersAndDigits = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
 	b := make([]byte, n)
