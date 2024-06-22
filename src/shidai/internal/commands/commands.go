@@ -45,6 +45,7 @@ var (
 		"status": handleStatusCommand,
 		"start":  handleStartComamnd,
 		"tx":     handleTxCommand,
+		"sekaid": handleSekaidCommand,
 	}
 )
 
@@ -70,6 +71,35 @@ func ExecuteCommandHandler(c *gin.Context) {
 }
 
 // [COMMANDS] //
+func handleSekaidCommand(args map[string]interface{}) (string, error) {
+	cmd, ok := args["exec"].([]string)
+
+	if !ok {
+		log.Error("Transaction command is missing or not a string array")
+		return "", types.ErrInvalidOrMissingTx
+	}
+
+	cm, err := docker.NewContainerManager()
+	if err != nil {
+		log.Error("Failed to initialize Docker API", zap.Error(err))
+		return "", fmt.Errorf("failed to initialize docker API: %w", err)
+	}
+
+	ctx := context.Background()
+	containerID := types.SEKAI_CONTAINER_ID
+
+	var out []byte = []byte{}
+	out, err = cm.ExecInContainer(ctx, containerID, cmd)
+	if err != nil {
+		log.Error("Failed to execute transaction command", zap.Strings("command", cmd), zap.Error(err))
+		return "", fmt.Errorf("failed to execute transaction command: %w", err)
+	}
+
+	log.Debug("Container output: ", zap.String("out", string(out)))
+	log.Info("Transaction command executed successfully", zap.Strings("command", cmd))
+	return "Transaction executed successfully", nil
+
+}
 func handleTxCommand(args map[string]interface{}) (string, error) {
 	cmd, ok := args["tx"].(string)
 	if !ok {
