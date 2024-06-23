@@ -72,11 +72,18 @@ func ExecuteCommandHandler(c *gin.Context) {
 
 // [COMMANDS] //
 func handleSekaidCommand(args map[string]interface{}) (string, error) {
-	cmd, ok := args["exec"].([]string)
-
+	execInterface, ok := args["exec"].([]interface{})
 	if !ok {
-		log.Error("Transaction command is missing or not a string array")
-		return "", types.ErrInvalidOrMissingTx
+		return "", fmt.Errorf("type assertion to []interface{} failed for args[\"exec\"]")
+	}
+
+	var cmd []string
+	for _, v := range execInterface {
+		str, ok := v.(string)
+		if !ok {
+			return "", fmt.Errorf("type assertion to string failed for element in exec")
+		}
+		cmd = append(cmd, str)
 	}
 
 	cm, err := docker.NewContainerManager()
