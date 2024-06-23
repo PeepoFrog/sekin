@@ -104,7 +104,7 @@ func handleSekaidCommand(args map[string]interface{}) (string, error) {
 
 	log.Debug("Container output: ", zap.String("out", string(out)))
 	log.Info("Transaction command executed successfully", zap.Strings("command", cmd))
-	return "Transaction executed successfully", nil
+	return string(out), nil
 
 }
 func handleTxCommand(args map[string]interface{}) (string, error) {
