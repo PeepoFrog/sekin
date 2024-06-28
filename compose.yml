@@ -28,7 +28,7 @@ services:
   interx:
     depends_on:
       - syslog-ng
-    image: ghcr.io/kiracore/sekin/interx:v0.4.48
+    image: ghcr.io/kiracore/sekin/interx:v0.4.49
     restart: always
     logging:
       driver: syslog
