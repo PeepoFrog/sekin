@@ -12,6 +12,7 @@ services:
         syslog-facility: local0
         tag: "sekai"
     volumes:
+      - ./tmp:/tmp
       - ./sekai:/sekai
     ports:
       - "26658:26658"           # ABCI
@@ -37,7 +38,6 @@ services:
         syslog-facility: local0
         tag: "interx"
     volumes:
-      - ./tmp:/tmp
       - ./interx:/interx
     ports:
       - "11000:11000"
