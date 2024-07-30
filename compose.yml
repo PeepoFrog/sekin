@@ -12,6 +12,7 @@ services:
         syslog-facility: local0
         tag: "sekai"
     volumes:
+      - ./tmp:/tmp
       - ./sekai:/sekai
     ports:
       - "26658:26658"           # ABCI
@@ -59,6 +60,7 @@ services:
       - ./syslog-data:/syslog-data
       - /var/run/docker.sock:/var/run/docker.sock
       - ./shidai:/shidaid
+      - ./tmp:/tmp
     networks:
       kiranet:
         ipv4_address: 10.1.0.5
