@@ -3,7 +3,7 @@ services:
   sekai:
     depends_on:
       - syslog-ng
-    image: ghcr.io/kiracore/sekin/sekai:v0.3.45
+    image: ghcr.io/kiracore/sekin/sekai:v0.4.1
     restart: always
     logging:
       driver: syslog
