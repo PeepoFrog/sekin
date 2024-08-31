@@ -26,6 +26,8 @@ func Serve() {
 	router.GET("/logs/interx", streamLogs(types.InterxLogPath))
 	router.GET("/status", infraStatus())
 	router.GET("/dashboard", getDashboardHandler())
+	router.GET("/config", getCurrentConfigs())
+	
 
 	updateContext := context.Background()
 
