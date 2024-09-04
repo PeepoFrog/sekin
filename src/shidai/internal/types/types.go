@@ -267,6 +267,8 @@ const (
 
 	InvalidOrMissingTx = "invalid or missing tx"
 
+	InvalidRequest = "invalid request"
+
 	FilePermRO os.FileMode = 0444
 	FilePermRW os.FileMode = 0644
 	FilePermEX os.FileMode = 0755
@@ -287,6 +289,8 @@ var (
 
 	ErrNoPublicIPAddresses       = errors.New(NoPublicIPAddresses)
 	ErrMultiplePublicIPAddresses = errors.New(MultiplePublicIPAddresses)
+
+	ErrInvalidRequest = errors.New(InvalidRequest)
 
 	SekaiFiles = InfraFiles{
 		"config.toml":        "/sekai/config/config.toml",
