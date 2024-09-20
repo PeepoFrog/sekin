@@ -25,7 +25,6 @@ func Serve() {
 	router.GET("/dashboard", getDashboardHandler())
 
 	go backgroundUpdate()
-
 	if err := router.Run(":8282"); err != nil {
 		log.Error("Failed to start the server", zap.Error(err))
 	}
