@@ -1,8 +1,10 @@
 package logger
 
 import (
+	"fmt"
 	"log/syslog"
 	"os"
+	"path/filepath"
 
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
@@ -14,6 +16,15 @@ func init() {
 
 	// File path for backup logging
 	logFilePath := "/syslog-data/syslog-ng/logs/shidai_backup.log"
+
+	logFileFolder := filepath.Dir(logFilePath)
+
+	if _, err := os.Stat(logFileFolder); os.IsNotExist(err) {
+		err = os.MkdirAll(logFileFolder, 0644)
+		if err != nil {
+			panic(fmt.Sprintf("Unable to create logs folder %s. %s", logFileFolder, err.Error()))
+		}
+	}
 
 	// Create the log file if it does not exist, or open it in append mode if it does
 	logFile, err := os.OpenFile(logFilePath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
