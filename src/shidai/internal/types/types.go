@@ -122,7 +122,7 @@ type (
 		DiscoveryTime       string `toml:"discovery_time"`
 		TempDir             string `toml:"temp_dir"`
 		ChunkRequestTimeout string `toml:"chunk_request_timeout"`
-		ChunkFetchers       int    `toml:"chunk_fetchers"`
+		ChunkFetchers       string `toml:"chunk_fetchers"`
 	}
 
 	FastSyncConfig struct {
@@ -165,9 +165,9 @@ type (
 	AppConfig struct {
 		MinimumGasPrices    string             `toml:"minimum-gas-prices"`
 		Pruning             string             `toml:"pruning"`
-		PruningKeepRecent   int                `toml:"pruning-keep-recent"`
-		PruningKeepEvery    int                `toml:"pruning-keep-every"`
-		PruningInterval     int                `toml:"pruning-interval"`
+		PruningKeepRecent   string             `toml:"pruning-keep-recent"`
+		PruningKeepEvery    string             `toml:"pruning-keep-every"`
+		PruningInterval     string             `toml:"pruning-interval"`
 		HaltHeight          int                `toml:"halt-height"`
 		HaltTime            int                `toml:"halt-time"`
 		MinRetainBlocks     int                `toml:"min-retain-blocks"`
@@ -273,6 +273,8 @@ const (
 
 	InvalidOrMissingTx = "invalid or missing tx"
 
+	InvalidRequest = "invalid request"
+
 	FilePermRO os.FileMode = 0444
 	FilePermRW os.FileMode = 0644
 	FilePermEX os.FileMode = 0755
@@ -295,6 +297,8 @@ var (
 
 	ErrNoPublicIPAddresses       = errors.New(NoPublicIPAddresses)
 	ErrMultiplePublicIPAddresses = errors.New(MultiplePublicIPAddresses)
+
+	ErrInvalidRequest = errors.New(InvalidRequest)
 
 	SekaiFiles = InfraFiles{
 		"config.toml":        "/sekai/config/config.toml",
@@ -320,9 +324,9 @@ func NewDefaultAppConfig() *AppConfig {
 	return &AppConfig{
 		MinimumGasPrices:    "0stake",
 		Pruning:             "custom",
-		PruningKeepRecent:   2,
-		PruningKeepEvery:    100,
-		PruningInterval:     10,
+		PruningKeepRecent:   "2",
+		PruningKeepEvery:    "100",
+		PruningInterval:     "10",
 		HaltHeight:          0,
 		HaltTime:            0,
 		MinRetainBlocks:     0,
@@ -459,7 +463,7 @@ func NewDefaultConfig() *Config {
 			DiscoveryTime:       "15s",
 			TempDir:             "/tmp",
 			ChunkRequestTimeout: "10s",
-			ChunkFetchers:       4,
+			ChunkFetchers:       "4",
 		},
 		FastSyncConfig: FastSyncConfig{
 			Version: "v1",
