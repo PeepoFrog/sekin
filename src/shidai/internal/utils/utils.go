@@ -1,7 +1,10 @@
 package utils
 
 import (
+	"bytes"
+	"crypto/md5"
 	"crypto/rand"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -10,6 +13,7 @@ import (
 	"os"
 	"reflect"
 	"regexp"
+	"syscall"
 
 	"github.com/BurntSushi/toml"
 	"github.com/kiracore/sekin/src/shidai/internal/logger"
@@ -286,4 +290,174 @@ func GetChainID(url string) (string, error) {
 	log.Info("Successfully retrieved chain ID", zap.String("chain_id", data.ChainID))
 	// Return the chain_id
 	return data.ChainID, nil
+}
+
+// validateToml is used to decode and validate if TOML matches the struct
+func ValidateToml(data []byte, result interface{}) error {
+	// Decode into map[string]interface{} to track extra fields
+	var rawMap map[string]interface{}
+	if _, err := toml.NewDecoder(bytes.NewReader(data)).Decode(&rawMap); err != nil {
+		return fmt.Errorf("failed to decode TOML into map: %w", err)
+	}
+
+	// Decode into the specific struct
+	if _, err := toml.Decode(string(data), result); err != nil {
+		return fmt.Errorf("failed to decode TOML into struct: %w", err)
+	}
+
+	// Ensure no extra fields exist in the TOML that aren't in the struct
+	if err := CheckForExtraFields(result, rawMap); err != nil {
+		return fmt.Errorf("extra fields found in TOML: %w", err)
+	}
+
+	return nil
+}
+
+// CheckForExtraFields compares the struct fields against the raw TOML map
+func CheckForExtraFields(structure interface{}, rawMap map[string]interface{}) error {
+	structValue := reflect.ValueOf(structure).Elem()
+	structType := structValue.Type()
+
+	// Build a set of valid field names
+	validFields := make(map[string]bool)
+	for i := 0; i < structValue.NumField(); i++ {
+		field := structType.Field(i)
+		tomlTag := field.Tag.Get("toml")
+		if tomlTag != "" {
+			validFields[tomlTag] = true
+		} else {
+			validFields[field.Name] = true
+		}
+	}
+
+	// Compare rawMap keys with struct fields
+	for key := range rawMap {
+		if !validFields[key] {
+			return fmt.Errorf("unexpected field '%s' found in TOML", key)
+		}
+	}
+
+	return nil
+}
+func SafeCopy(src, dst string) error {
+	log.Debug("Trying to copy <%v> to <%v>", zap.String("source:", src), zap.String("destination:", dst))
+	check := FileExists(src)
+	if !check {
+		return fmt.Errorf("source file does not exist")
+	}
+
+	info, err := os.Stat(dst)
+	if err == nil {
+		if info.IsDir() {
+			return fmt.Errorf("destination path <%v> is a folder, cannot overwrite", dst)
+		}
+	} else if !os.IsNotExist(err) {
+		return fmt.Errorf("failed to access destination path <%v>: %w", dst, err)
+	}
+
+	srcFile, err := os.Open(src)
+	if err != nil {
+		return fmt.Errorf("failed to open source file: %w", err)
+	}
+	defer srcFile.Close()
+
+	if err := syscall.Flock(int(srcFile.Fd()), syscall.LOCK_EX|syscall.LOCK_NB); err != nil {
+		if err == syscall.EWOULDBLOCK {
+			return fmt.Errorf("file is locked: %w", err)
+		} else {
+			return fmt.Errorf("failed to lock source file: %w", err)
+		}
+	}
+
+	defer syscall.Flock(int(srcFile.Fd()), syscall.LOCK_UN)
+
+	dstFile, err := os.Create(dst)
+	if err != nil {
+		return fmt.Errorf("failed to create destination file: %w", err)
+	}
+	defer dstFile.Close()
+
+	if err := syscall.Flock(int(dstFile.Fd()), syscall.LOCK_EX|syscall.LOCK_NB); err != nil {
+		if err == syscall.EWOULDBLOCK {
+			return fmt.Errorf("destination file is locked: %w", err)
+		} else {
+			return fmt.Errorf("failed to lock destination file: %w", err)
+		}
+	}
+	defer syscall.Flock(int(dstFile.Fd()), syscall.LOCK_UN)
+
+	if _, err := io.Copy(dstFile, srcFile); err != nil {
+		return fmt.Errorf("failed to copy file: %w", err)
+	}
+
+	log.Debug("File copied", zap.String("source:", src), zap.String("destination:", dst))
+	return nil
+}
+
+func FilesAreEqual(file1, file2 string) (bool, error) {
+	f1, err := os.Open(file1)
+	if err != nil {
+		return false, fmt.Errorf("failed to open file1: %w", err)
+	}
+	defer f1.Close()
+
+	f2, err := os.Open(file2)
+	if err != nil {
+		return false, fmt.Errorf("failed to open file2: %w", err)
+	}
+	defer f2.Close()
+
+	buf1 := make([]byte, 1024)
+	buf2 := make([]byte, 1024)
+
+	for {
+		n1, err1 := f1.Read(buf1)
+		n2, err2 := f2.Read(buf2)
+
+		if err1 != nil && err1 != io.EOF {
+			return false, fmt.Errorf("failed to read from file1: %w", err1)
+		}
+		if err2 != nil && err2 != io.EOF {
+			return false, fmt.Errorf("failed to read from file2: %w", err2)
+		}
+
+		if n1 != n2 || !bytes.Equal(buf1[:n1], buf2[:n2]) {
+			return false, nil
+		}
+
+		if err1 == io.EOF && err2 == io.EOF {
+			break
+		}
+	}
+
+	return true, nil
+}
+
+func FilesAreEqualMD5(file1, file2 string) (bool, error) {
+	hash1, err := HashFileMD5(file1)
+	if err != nil {
+		return false, fmt.Errorf("failed to hash file1: %w", err)
+	}
+
+	hash2, err := HashFileMD5(file2)
+	if err != nil {
+		return false, fmt.Errorf("failed to hash file2: %w", err)
+	}
+
+	return hash1 == hash2, nil
+}
+
+func HashFileMD5(filename string) (string, error) {
+	f, err := os.Open(filename)
+	if err != nil {
+		return "", fmt.Errorf("failed to open file: %w", err)
+	}
+	defer f.Close()
+
+	hasher := md5.New()
+	if _, err := io.Copy(hasher, f); err != nil {
+		return "", fmt.Errorf("failed to hash file: %w", err)
+	}
+
+	return hex.EncodeToString(hasher.Sum(nil)), nil
 }

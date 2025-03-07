@@ -26,7 +26,7 @@ var (
 )
 
 const (
-	endpointPubP2PList string = "api/pub_p2p_list?peers_only=true"
+	endpointPubP2PList string = "api/pub_p2p_list?peers_only=true&unsafe=true"
 )
 
 type networkInfo struct {
@@ -237,9 +237,9 @@ func GetJoinerAppConfig(config *types.AppConfig) *types.AppConfig {
 	config.StateSync.SnapshotInterval = 200
 	config.StateSync.SnapshotKeepRecent = 2
 	config.Pruning = "custom"
-	config.PruningKeepRecent = 2
-	config.PruningKeepEvery = 100
-	config.PruningInterval = 10
+	config.PruningKeepRecent = "2"
+	config.PruningKeepEvery = "100"
+	config.PruningInterval = "10"
 	config.GRPC.Address = fmt.Sprintf("0.0.0.0:%v", types.DEFAULT_GRPC_PORT)
 
 	return config

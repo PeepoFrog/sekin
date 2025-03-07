@@ -6,7 +6,9 @@ import (
 	"net/http"
 	"os"
 	"strconv"
+	"time"
 
+	dtypes "github.com/docker/docker/api/types"
 	"github.com/kiracore/sekin/src/shidai/internal/docker"
 	interxhandler "github.com/kiracore/sekin/src/shidai/internal/interx_handler"
 	interxhelper "github.com/kiracore/sekin/src/shidai/internal/interx_handler/interx_helper"
@@ -46,6 +48,7 @@ var (
 		"start":  handleStartComamnd,
 		"tx":     handleTxCommand,
 		"sekaid": handleSekaidCommand,
+		"stop":   handleStopCommand,
 	}
 )
 
@@ -72,11 +75,18 @@ func ExecuteCommandHandler(c *gin.Context) {
 
 // [COMMANDS] //
 func handleSekaidCommand(args map[string]interface{}) (string, error) {
-	cmd, ok := args["exec"].([]string)
-
+	execInterface, ok := args["exec"].([]interface{})
 	if !ok {
-		log.Error("Transaction command is missing or not a string array")
-		return "", types.ErrInvalidOrMissingTx
+		return "", fmt.Errorf("type assertion to []interface{} failed for args[\"exec\"]")
+	}
+
+	var cmd []string
+	for _, v := range execInterface {
+		str, ok := v.(string)
+		if !ok {
+			return "", fmt.Errorf("type assertion to string failed for element in exec")
+		}
+		cmd = append(cmd, str)
 	}
 
 	cm, err := docker.NewContainerManager()
@@ -97,7 +107,7 @@ func handleSekaidCommand(args map[string]interface{}) (string, error) {
 
 	log.Debug("Container output: ", zap.String("out", string(out)))
 	log.Info("Transaction command executed successfully", zap.Strings("command", cmd))
-	return "Transaction executed successfully", nil
+	return string(out), nil
 
 }
 func handleTxCommand(args map[string]interface{}) (string, error) {
@@ -219,7 +229,7 @@ func handleJoinCommand(args map[string]interface{}) (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("unable to init interx: %w", err)
 	}
-	err = interxhandler.StartInterx()
+	err = interxhandler.StartInterx(ctx)
 	if err != nil {
 		return "", fmt.Errorf("unable to start interx: %w", err)
 	}
@@ -255,7 +265,7 @@ func handleStartComamnd(args map[string]interface{}) (string, error) {
 		return "", err
 	}
 
-	err = interxhandler.StartInterx()
+	err = interxhandler.StartInterx(ctx)
 	if err != nil {
 		return "", fmt.Errorf("unable to start interx: %w", err)
 	}
@@ -264,4 +274,72 @@ func handleStartComamnd(args map[string]interface{}) (string, error) {
 		return "", err
 	}
 	return "Sekai and Interx started successfully", nil
+}
+
+func handleStopCommand(args map[string]interface{}) (string, error) {
+	cm, err := docker.NewContainerManager()
+	if err != nil {
+		return "", err
+	}
+	ctx := context.Background()
+
+	running, err := cm.ContainerIsRunning(ctx, types.SEKAI_CONTAINER_ID)
+	if err != nil {
+		return "", err
+	}
+	if running {
+		sekaiErr := cm.KillContainerWithSigkill(ctx, types.SEKAI_CONTAINER_ID, types.SIGTERM)
+		if sekaiErr != nil {
+			return "", err
+		}
+		for i := range 5 {
+			log.Debug("checking if container is stopped")
+			stopped, sekaiErr := cm.ContainerIsStopped(ctx, types.SEKAI_CONTAINER_ID)
+			if sekaiErr != nil {
+				return "", err
+			}
+			if stopped {
+				sekaiErr = cm.Cli.ContainerStart(ctx, types.SEKAI_CONTAINER_ID, dtypes.ContainerStartOptions{})
+				if sekaiErr != nil {
+					return "", err
+				}
+				break
+			} else {
+				log.Debug("container is not stopped yet, waiting to shutdown", zap.Int("attempt", i))
+				time.Sleep(time.Second)
+			}
+
+		}
+	}
+
+	running, err = cm.ContainerIsRunning(ctx, types.INTERX_CONTAINER_ID)
+	if err != nil {
+		return "", err
+	}
+	if running {
+		interxErr := cm.KillContainerWithSigkill(ctx, types.INTERX_CONTAINER_ID, types.SIGKILL)
+		if interxErr != nil {
+			return "", err
+		}
+
+		for i := range 5 {
+			log.Debug("checking if container is stopped")
+			stopped, interxErr := cm.ContainerIsStopped(ctx, types.INTERX_CONTAINER_ID)
+			if interxErr != nil {
+				return "", err
+			}
+			if stopped {
+				interxErr = cm.Cli.ContainerStart(ctx, types.INTERX_CONTAINER_ID, dtypes.ContainerStartOptions{})
+				if interxErr != nil {
+					return "", err
+				}
+				break
+			} else {
+				log.Debug("container is not stopped yet, waiting to shutdown", zap.Int("attempt", i))
+				time.Sleep(time.Second)
+			}
+		}
+	}
+
+	return "Sekai and Interx stoped seccessfully", nil
 }

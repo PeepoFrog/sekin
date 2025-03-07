@@ -6,6 +6,12 @@ import (
 )
 
 type (
+	SekinPackagesVersion struct {
+		Sekai  string
+		Interx string
+		Shidai string
+	}
+
 	InfraFiles map[string]string
 
 	AppInfo struct {
@@ -116,7 +122,7 @@ type (
 		DiscoveryTime       string `toml:"discovery_time"`
 		TempDir             string `toml:"temp_dir"`
 		ChunkRequestTimeout string `toml:"chunk_request_timeout"`
-		ChunkFetchers       int    `toml:"chunk_fetchers"`
+		ChunkFetchers       string `toml:"chunk_fetchers"`
 	}
 
 	FastSyncConfig struct {
@@ -159,9 +165,9 @@ type (
 	AppConfig struct {
 		MinimumGasPrices    string             `toml:"minimum-gas-prices"`
 		Pruning             string             `toml:"pruning"`
-		PruningKeepRecent   int                `toml:"pruning-keep-recent"`
-		PruningKeepEvery    int                `toml:"pruning-keep-every"`
-		PruningInterval     int                `toml:"pruning-interval"`
+		PruningKeepRecent   string             `toml:"pruning-keep-recent"`
+		PruningKeepEvery    string             `toml:"pruning-keep-every"`
+		PruningInterval     string             `toml:"pruning-interval"`
 		HaltHeight          int                `toml:"halt-height"`
 		HaltTime            int                `toml:"halt-time"`
 		MinRetainBlocks     int                `toml:"min-retain-blocks"`
@@ -237,6 +243,10 @@ const (
 	DEFAULT_RPC_PORT    int    = 26657
 	DEFAULT_GRPC_PORT   int    = 9090
 
+	SEKAI_CONFIG_FOLDER  string = SEKAI_HOME + "/config"
+	INTERX_ADDRBOOK_PATH string = INTERX_HOME + "/addrbook.json"
+	SEKAI_ADDRBOOK_PATH  string = SEKAI_CONFIG_FOLDER + "/addrbook.json"
+
 	SEKAI_CONTAINER_ADDRESS  string = "sekai.local"
 	INTERX_CONTAINER_ADDRESS string = "interx.local"
 
@@ -267,12 +277,20 @@ const (
 
 	InvalidOrMissingTx = "invalid or missing tx"
 
+	InvalidRequest = "invalid request"
+
 	FilePermRO os.FileMode = 0444
 	FilePermRW os.FileMode = 0644
 	FilePermEX os.FileMode = 0755
 
 	DirPermRO os.FileMode = 0555
 	DirPermWR os.FileMode = 0755
+
+	UPDATER_BIN_PATH         = "/updater"
+	SEKIN_LATEST_COMPOSE_URL = "https://raw.githubusercontent.com/KiraCore/sekin/main/compose.yml"
+
+	SIGKILL string = "SIGKILL" // 9 - interx
+	SIGTERM string = "SIGTERM" // 15 - sekai
 )
 
 var (
@@ -287,6 +305,8 @@ var (
 
 	ErrNoPublicIPAddresses       = errors.New(NoPublicIPAddresses)
 	ErrMultiplePublicIPAddresses = errors.New(MultiplePublicIPAddresses)
+
+	ErrInvalidRequest = errors.New(InvalidRequest)
 
 	SekaiFiles = InfraFiles{
 		"config.toml":        "/sekai/config/config.toml",
@@ -312,9 +332,9 @@ func NewDefaultAppConfig() *AppConfig {
 	return &AppConfig{
 		MinimumGasPrices:    "0stake",
 		Pruning:             "custom",
-		PruningKeepRecent:   2,
-		PruningKeepEvery:    100,
-		PruningInterval:     10,
+		PruningKeepRecent:   "2",
+		PruningKeepEvery:    "100",
+		PruningInterval:     "10",
 		HaltHeight:          0,
 		HaltTime:            0,
 		MinRetainBlocks:     0,
@@ -451,7 +471,7 @@ func NewDefaultConfig() *Config {
 			DiscoveryTime:       "15s",
 			TempDir:             "/tmp",
 			ChunkRequestTimeout: "10s",
-			ChunkFetchers:       4,
+			ChunkFetchers:       "4",
 		},
 		FastSyncConfig: FastSyncConfig{
 			Version: "v1",
