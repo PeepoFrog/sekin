@@ -10,7 +10,7 @@ env:
   REPO: kiracore/sekin
 jobs:
   Build_publish_and_sign:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-latest
     steps:
       - name: Extract payload data # OCI image spec
         id: payload-extract
