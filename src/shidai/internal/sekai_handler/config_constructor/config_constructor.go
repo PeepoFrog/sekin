@@ -240,7 +240,7 @@ func GetJoinerAppConfig(config *types.AppConfig) *types.AppConfig {
 	config.StateSync.SnapshotKeepRecent = 2
 	config.Pruning = "custom"
 	config.PruningKeepRecent = "2"
-	config.PruningKeepEvery = "100"
+	// config.PruningKeepEvery = "100"
 	config.PruningInterval = "10"
 	config.GRPC.Address = fmt.Sprintf("0.0.0.0:%v", types.DEFAULT_GRPC_PORT)
 
