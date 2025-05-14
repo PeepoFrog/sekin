@@ -138,9 +138,9 @@ type InstrumentationConfig struct {
 
 func NewDefaultConfig() *Config {
 	return &Config{
-		ProxyApp: "tcp://127.0.0.1:26658",
-		Moniker:  "KIRA VALIDATOR NODE",
-		// FastSync:               true,
+		ProxyApp:               "tcp://127.0.0.1:26658",
+		Moniker:                "KIRA VALIDATOR NODE",
+		BlockSync:              true, // default value
 		DBBackend:              "goleveldb",
 		DBDir:                  "data",
 		LogLevel:               "info",
@@ -152,8 +152,14 @@ func NewDefaultConfig() *Config {
 		NodeKeyFile:            "config/node_key.json",
 		ABCI:                   "socket",
 		FilterPeers:            false,
+		//[blocksync]
+		BlockSyncSection: BlockSyncConfig{
+			Version: "v0",
+		},
+
+		// [rpc]
 		RPC: RPCConfig{
-			Laddr:                                "tcp://0.0.0.0:26657",
+			Laddr:                                "tcp://0.0.0.0:26657", // 0.0.0.0 or localhost?
 			CORSAllowedOrigins:                   []string{"*"},
 			CORSAllowedMethods:                   []string{"HEAD", "GET", "POST"},
 			CORSAllowedHeaders:                   []string{"Origin", "Accept", "Content-Type", "X-Requested-With", "X-Server-Time"},
@@ -173,6 +179,7 @@ func NewDefaultConfig() *Config {
 			TLSKeyFile:                           "",
 			PprofLaddr:                           "localhost:6060",
 		},
+		// [p2p]
 		P2P: P2PConfig{
 			Laddr:                        "tcp://0.0.0.0:26656",
 			ExternalAddress:              "", // tcp://IP:PORT
@@ -180,7 +187,7 @@ func NewDefaultConfig() *Config {
 			PersistentPeers:              "",
 			UPNP:                         false,
 			AddrBookFile:                 "config/addrbook.json",
-			AddrBookStrict:               false,
+			AddrBookStrict:               false, //default is true
 			MaxNumInboundPeers:           128,
 			MaxNumOutboundPeers:          32,
 			UnconditionalPeerIDs:         "",
@@ -196,6 +203,8 @@ func NewDefaultConfig() *Config {
 			HandshakeTimeout:             "60s",
 			DialTimeout:                  "30s",
 		},
+
+		// [mempool]
 		Mempool: MempoolConfig{
 			Version:               "v0",
 			Recheck:               true,
@@ -210,6 +219,7 @@ func NewDefaultConfig() *Config {
 			TTLDuration:           "0s",
 			TTLNumBlocks:          0,
 		},
+		// [statesync]
 		StateSync: StateSyncConfig{
 			Enable:              false,
 			RPCServers:          "",
@@ -221,7 +231,7 @@ func NewDefaultConfig() *Config {
 			ChunkRequestTimeout: "10s",
 			ChunkFetchers:       "4",
 		},
-
+		// [consensus]
 		Consensus: ConsensusConfig{
 			WALFile:                     "data/cs.wal/wal",
 			TimeoutPropose:              "3s",
@@ -238,13 +248,16 @@ func NewDefaultConfig() *Config {
 			PeerGossipSleepDuration:     "100ms",
 			PeerQueryMaj23SleepDuration: "2s",
 		},
+		// [storage]
 		Storage: StorageConfig{
 			DiscardABCIResponses: false,
 		},
+		// [tx_index]
 		TxIndex: TxIndexConfig{
 			Indexer:  "kv",
 			PSQLConn: "",
 		},
+		// [instrumentation]
 		Instrumentation: InstrumentationConfig{
 			Prometheus:           true,
 			PrometheusListenAddr: ":26660",
