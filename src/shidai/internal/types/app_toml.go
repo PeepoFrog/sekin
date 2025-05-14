@@ -106,6 +106,7 @@ type WasmConfig struct {
 
 func NewDefaultAppConfig() *AppConfig {
 	return &AppConfig{
+		// general fields
 		MinimumGasPrices:  "0stake",
 		Pruning:           "custom",
 		PruningKeepRecent: "2",
@@ -118,6 +119,8 @@ func NewDefaultAppConfig() *AppConfig {
 		IndexEvents:         []string{},
 		IavlCacheSize:       781250,
 		IavlDisableFastNode: true,
+		AppDBBackend:        "",
+		// [telemetry]
 		Telemetry: TelemetryConfig{
 			ServiceName:             "",
 			Enabled:                 false,
@@ -127,39 +130,72 @@ func NewDefaultAppConfig() *AppConfig {
 			PrometheusRetentionTime: 0,
 			GlobalLabels:            [][]string{},
 		},
+		// [api]
 		API: APIConfig{
 			Enable:             false,
 			Swagger:            false,
-			Address:            "tcp://0.0.0.0:1317",
+			Address:            "tcp://0.0.0.0:1317", // 0.0.0.0 or localhost?
 			MaxOpenConnections: 1000,
 			RPCReadTimeout:     10,
 			RPCWriteTimeout:    0,
 			RPCMaxBodyBytes:    1000000,
 			EnabledUnsafeCORS:  false,
 		},
+		// [rosetta]
 		Rosetta: RosettaConfig{
-			Enable:     false,
-			Address:    ":8080",
-			Blockchain: "app",
-			Network:    "network",
-			Retries:    3,
-			Offline:    false,
+			Enable:              false,
+			Address:             ":8080",
+			Blockchain:          "app",
+			Network:             "network",
+			Retries:             3,
+			Offline:             false,
+			EnableFeeSuggestion: false,
+			GasToSuggest:        200000,
+			DenomToSuggest:      "ukex", //default uatom
 		},
+		// [grpc]
 		GRPC: GRPCConfig{
-			Enable:  true,
-			Address: "0.0.0.0:9090",
+			Enable:         true,
+			Address:        "0.0.0.0:9090", // 0.0.0.0 or localhost?
+			MaxRecvMsgSize: "10485760",     // default value
+			MaxSendMsgSize: "2147483647",   // default value
 		},
+		// [grpc-web]
 		GRPCWeb: GRPCWebConfig{
 			Enable:           true,
-			Address:          "0.0.0.0:9091",
+			Address:          "0.0.0.0:9091", // 0.0.0.0 or localhost?
 			EnableUnsafeCORS: false,
 		},
+		// [state-sync]
 		StateSync: StateSyncAppConfig{
 			SnapshotInterval:   200,
 			SnapshotKeepRecent: 2,
 		},
+		// [store]
+		Store: StoreConfig{
+			Streamers: []string{},
+		},
+		// [streamers]
+		Streamers: StreamersConfig{
+			// [streamers.file]
+			StreamersFileConfig{
+				Keys:            []string{"*"},
+				WriteDir:        "",
+				Prefix:          "",
+				OutputMetadata:  "true",
+				StopNodeOnError: "true",
+				Fsync:           "false",
+			},
+		},
+		// [mempool]
+		Mempool: MempoolAppConfig{
+			MaxTxs: 5000, // default value
+		},
+		// [wasm]
 		Wasm: WasmConfig{
 			QueryGasLimit: 300000,
+			LRUSize:       0,
 		},
 	}
+
 }
