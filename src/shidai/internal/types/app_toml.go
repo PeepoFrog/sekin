@@ -132,7 +132,7 @@ func NewDefaultAppConfig() *AppConfig {
 		},
 		// [api]
 		API: APIConfig{
-			Enable:             false,
+			Enable:             true, // api should be true for new interx
 			Swagger:            false,
 			Address:            "tcp://0.0.0.0:1317", // 0.0.0.0 or localhost?
 			MaxOpenConnections: 1000,
