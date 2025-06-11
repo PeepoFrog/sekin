@@ -1,7 +1,21 @@
 sekai/*
-interx/*
 syslog-data/*
 test/*
 src/shidai/test/*
 shidai/*
 .vscode
+
+# Interx runtime data - exclude logs and temp files
+manager/logs/*
+proxy/logs/*
+worker/sai-storage-mongo/logs/*
+tmp/*
+
+# Keep config files
+!manager/config.yml
+!proxy/config.yml
+!worker/**/config.yml
+!worker/**/config.json
+!worker/**/contracts.json
+!worker/**/block.data
+!worker/cosmos/sai-cosmos-interaction/kira19g3ueqj45wv0pqngeu0hcysjksns76r2nrz63u
