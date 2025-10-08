@@ -188,7 +188,7 @@ services:
   mongo:
     depends_on:
       - syslog-ng
-    image: mongo:latest
+    image: mongo:7.0
     restart: always
     logging:
       driver: syslog
@@ -236,8 +236,8 @@ services:
     volumes:
       - ./syslog-data:/var/log
     ports:
-      - "514:514/udp"
-      - "514:514"
+      - "127.0.0.1:514:514/udp"
+      - "127.0.0.1:514:514"
     networks:
       kiranet:
         ipv4_address: 10.1.0.2
