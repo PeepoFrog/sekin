@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"strconv"
 	"time"
 
 	mnemonicsgenerator "github.com/KiraCore/tools/validator-key-gen/MnemonicsGenerator"
@@ -38,7 +39,7 @@ func InitInterx(ctx context.Context, masterMnemonicSet *mnemonicsgenerator.Maste
 			"addrbook":          types.INTERX_ADDRBOOK_PATH,
 		},
 	}
-	out, err := httpexecutor.ExecuteCallerCommand(types.INTERX_CONTAINER_ADDRESS, "8081", "POST", cmd)
+	out, err := httpexecutor.ExecuteCallerCommand(types.INTERX_CONTAINER_ADDRESS, strconv.Itoa(types.DEFAULT_PROXY_CALLER_PORT), "POST", cmd)
 	if err != nil {
 		return fmt.Errorf("unable execute <%v> request, error: %w", cmd, err)
 	}
@@ -54,7 +55,7 @@ func StartInterx(ctx context.Context) error {
 			"home": types.INTERX_HOME,
 		},
 	}
-	_, err := httpexecutor.ExecuteCallerCommand(types.INTERX_CONTAINER_ADDRESS, "8081", "POST", cmd)
+	_, err := httpexecutor.ExecuteCallerCommand(types.INTERX_CONTAINER_ADDRESS, strconv.Itoa(types.DEFAULT_PROXY_CALLER_PORT), "POST", cmd)
 	if err != nil {
 		if errors.Is(err, io.EOF) {
 			log.Debug("interx started")

@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"strconv"
 
 	mnemonicsgenerator "github.com/KiraCore/tools/validator-key-gen/MnemonicsGenerator"
 	httpexecutor "github.com/kiracore/sekin/src/shidai/internal/http_executor"
@@ -32,7 +33,7 @@ func InitSekaiJoiner(ctx context.Context, tc *configconstructor.TargetSeedKiraCo
 			"moniker":  "validator node",
 		},
 	}
-	_, err := httpexecutor.ExecuteCallerCommand("sekai.local", "8080", "POST", cmd)
+	_, err := httpexecutor.ExecuteCallerCommand("sekai.local", strconv.Itoa(types.DEFAULT_SEKAI_CALLER_PORT), "POST", cmd)
 	if err != nil {
 		log.Error("Failed to execute caller command", zap.Any("command", cmd), zap.Error(err))
 		return fmt.Errorf("unable execute <%v> request, error: %w", cmd, err)
@@ -46,7 +47,7 @@ func InitSekaiJoiner(ctx context.Context, tc *configconstructor.TargetSeedKiraCo
 	}
 	log.Debug("Sekai keys set successfully")
 
-	genesis, err := genesishandler.GetVerifiedGenesisFile(ctx, tc.IpAddress, tc.SekaidRPCPort, tc.InterxPort)
+	genesis, err := genesishandler.GetVerifiedGenesisFile(ctx, tc.IpAddress, tc.InterxPort)
 	if err != nil {
 		log.Error("Failed to receive verified genesis file", zap.String("IP", tc.IpAddress), zap.Error(err))
 		return fmt.Errorf("unable to receive genesis file: %w", err)

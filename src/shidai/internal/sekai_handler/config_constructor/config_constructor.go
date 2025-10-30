@@ -107,7 +107,8 @@ func retrieveNetworkInformation(ctx context.Context, tc *TargetSeedKiraConfig) (
 	}
 
 	// Parse all peers in the network
-	nodes, _, err := networkparser.GetAllNodesV3(ctx, tc.IpAddress, 3, false)
+	interxPort, _ := strconv.Atoi(tc.InterxPort)
+	nodes, _, err := networkparser.GetAllNodesV3(ctx, tc.IpAddress, interxPort, 3, false)
 	if err != nil {
 		log.Error("Failed to parse peers", zap.Error(err))
 		return nil, fmt.Errorf("unable to parse peers: %w", err)
@@ -122,7 +123,7 @@ func retrieveNetworkInformation(ctx context.Context, tc *TargetSeedKiraConfig) (
 		wg.Add(1)
 		go func(n networkparser.Node) {
 			defer wg.Done()
-			pupP2PListResponse, err := getPubP2PList(ctx, n.IP, "11000")
+			pupP2PListResponse, err := getPubP2PList(ctx, n.IP, tc.InterxPort)
 			if err != nil {
 				log.Debug("Failed to get public P2P list", zap.String("IP", n.IP), zap.Error(err))
 				return
