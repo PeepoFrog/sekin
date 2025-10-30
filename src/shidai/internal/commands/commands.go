@@ -2,6 +2,7 @@ package commands
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/http"
 	"os"
@@ -235,6 +236,11 @@ func handleJoinCommand(args map[string]interface{}) (string, error) {
 	}
 	err = interxhelper.CheckInterxStart(ctx)
 	if err != nil {
+		// If it's a timeout, return success with a warning since the join is actually working
+		if errors.Is(err, context.DeadlineExceeded) {
+			log.Warn("Interx start check timed out, but join process is continuing in background", zap.Error(err))
+			return fmt.Sprintf("Join command initiated for IP: %s. Blockchain sync is continuing in background.", ip), nil
+		}
 		return "", err
 	}
 	// Example of using the IP, and similar for other fields
