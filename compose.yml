@@ -43,7 +43,7 @@ services:
         tag: "manager"
     ports:
       - "127.0.0.1:8080:8080"             # HTTP server
-      - "127.0.0.1:9000:9000/udp"         # P2P UDP
+      - "9000:9000/udp"         # P2P UDP
     networks:
       kiranet:
         ipv4_address: 10.1.0.4
