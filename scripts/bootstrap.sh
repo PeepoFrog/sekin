@@ -6,289 +6,161 @@ if [ "$(id -u)" != "0" ]; then
    exit 1
 fi
 
-# System vars
-ARCHITECTURE=$(uname -m)
+set -e
 
-# Docker vars
-BASE_IMAGE="python:3.12.2-slim"
-DOCKER_VER="7.0.0"
-DOCKER_COMPOSE_VER="v2.24.6"
+# Configuration
+KM_USER="km"
+KM_HOME="/home/km"
+SEKIN_REPO="https://github.com/KiraCore/sekin.git"
+SEKIN_DIR="$KM_HOME/sekin"
+COMPOSE_FILE="$SEKIN_DIR/compose.yml"
 
-# Ansible vars
-ANSIBLE_VER="9.2.0"
-ANSIBLE_TAG="ansible-runner"
-ANSIBLE_DIR="/root/ansible-runner"
-ANSIBLE_DOCKERFILE="$ANSIBLE_DIR/Dockerfile"
-ANSIBLE_ENTRYPOINT="$ANSIBLE_DIR/entrypoint.sh"
+echo "======================================"
+echo "SEKIN Bootstrap Script"
+echo "======================================"
+echo ""
 
-# HOST
-KM_DIR="/home/km"
-SEKIN_GIT="https://github.com/KiraCore/sekin.git"
-SEKIN_DIR="$KM_DIR/sekin"
-COMPOSE_URL="https://raw.githubusercontent.com/KiraCore/sekin/main/compose.yml"
-COMPOSE_PATH="/home/km/sekin/compose.yml"
-
-# DEPLOY
-SEKAI_VER=""
-INTERX_VER=""
-
-for arg in "$@"; do
-    case $arg in
-        --sekai=*)
-        SEKAI_VER="${arg#*=}"
-        shift
-        ;;
-        --interx=*)
-        INTERX_VER="${arg#*=}"
-        shift
-        ;;
-    esac
-done
-
-# Validate the version format and existence, warn if not provided or incorrect
-if [[ -z "$SEKAI_VER" || ! $SEKAI_VER =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
-    echo "Warning: Invalid or missing SEKAI version. Continuing with default or previously set version."
-fi
-
-if [[ -z "$INTERX_VER" || ! $INTERX_VER =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
-    echo "Warning: Invalid or missing INTERX version. Continuing with default or previously set version."
-fi
-
-echo "Using SEKAI version: $SEKAI_VER"
-echo "Using INTERX version: $INTERX_VER"
+# Function to check if command exists
+command_exists() {
+    command -v "$1" >/dev/null 2>&1
+}
 
 # Function to update system
 update_system() {
-    echo "Updating system..."
-    sudo apt-get update || { echo "Failed to update system. Exiting..."; exit 1; }
+    echo "[1/5] Updating system packages..."
+    apt-get update -qq || { echo "Failed to update system. Exiting..."; exit 1; }
+    echo "✓ System updated"
 }
 
 # Function to install prerequisites
 install_prerequisites() {
-    echo "Installing prerequisites..."
-    sudo apt-get install -y apt-transport-https ca-certificates wget curl software-properties-common jq || { echo "Failed to install prerequisites. Exiting..."; exit 1; }
+    echo "[2/5] Installing prerequisites..."
+    apt-get install -y -qq \
+        apt-transport-https \
+        ca-certificates \
+        curl \
+        gnupg \
+        lsb-release \
+        git \
+        jq \
+        software-properties-common || { echo "Failed to install prerequisites. Exiting..."; exit 1; }
+    echo "✓ Prerequisites installed"
 }
 
 # Function to install Docker
 install_docker() {
-    echo "Installing Docker..."	
-    sudo install -m 0755 -d /etc/apt/keyrings
-    sudo curl -fsSL https://download.docker.com/linux/ubuntu/gpg -o /etc/apt/keyrings/docker.asc
-    sudo chmod a+r /etc/apt/keyrings/docker.asc
-    echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/ubuntu $(. /etc/os-release && echo "$VERSION_CODENAME") stable" | tee /etc/apt/sources.list.d/docker.list > /dev/null || { echo "Failed to add Docker repository to apt sources."; exit 1; }
-    sudo apt-get update
-    sudo apt-get install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin || { echo "Failed to install Docker."; exit 1; }
-}
-
-create_dockerfile_ansible_runner() {
-    cat > "$ANSIBLE_DOCKERFILE" <<EOF
-# Use build argument for the base image
-ARG BASE_IMAGE=$BASE_IMAGE
-
-# Use an official Python runtime as a parent image
-FROM \$BASE_IMAGE
-
-# Environment variables to be added when building
-ENV DOCKER_VER=$DOCKER_VER
-ENV ANSIBLE_VER=$ANSIBLE_VER
-
-# Install dependencies required for ansible and ssh connections
-RUN apt-get update && \\
-    apt-get install -y --no-install-recommends \\
-    ssh \\
-    openssh-client \\
-    rsyslog \\
-    systemd \\
-    && apt-get clean \\
-    && rm -rf /var/lib/apt/lists/* \\
-    && python -m pip install --upgrade pip cffi \\
-    && pip install ansible==\${ANSIBLE_VER} \\
-    && pip install docker==\${DOCKER_VER}
-
-# Set the working directory in the container to /src
-WORKDIR /src
-
-# Copy the entrypoint script and src directory into the container
-COPY entrypoint.sh /entrypoint.sh
-
-RUN chmod +x /entrypoint.sh
-
-ENTRYPOINT ["/entrypoint.sh"]
-CMD ["ansible-playbook", "--version"]
-EOF
-
-    echo "Dockerfile created."
-}
-
-create_entrypoint_ansible_runner() {
-    cat > "$ANSIBLE_ENTRYPOINT" <<EOF
-#!/bin/bash
-
-# Default to showing the Ansible version if no command is specified
-if [ \$# -eq 0 ]; then
-    exec ansible-playbook --version
-else
-    exec "\$@"
-fi
-EOF
-
-    chmod +x "$ANSIBLE_ENTRYPOINT"
-    echo "Entrypoint script created."
-}
-
-create_ansible_runner() {
-    echo "Creating ansible-runner container..."
-    mkdir -p "$ANSIBLE_DIR"
-    create_dockerfile_ansible_runner || { echo "Failed to create Dockerfile."; exit 1; }
-    create_entrypoint_ansible_runner || { echo "Failed to create entrypoint script."; exit 1; }
-    cd "$ANSIBLE_DIR" || exit
-    docker build -t "$ANSIBLE_TAG:$ANSIBLE_VER" . || { echo "Failed to build ansible-runner container."; exit 1; }
-    echo "Ansible runner container created."
-}
-
-install_docker_compose() {
-    echo "Installing Docker Compose..."
-
-    # Setting up the Docker config directory
-    DOCKER_CONFIG=${DOCKER_CONFIG:-$HOME/.docker}
-    mkdir -p "$DOCKER_CONFIG/cli-plugins" || { echo "Failed to create directory: $DOCKER_CONFIG/cli-plugins"; exit 1; }
-
-    # Downloading Docker Compose
-    echo "Downloading Docker Compose version $DOCKER_COMPOSE_VER for $ARCHITECTURE..."
-    curl -SL "https://github.com/docker/compose/releases/download/$DOCKER_COMPOSE_VER/docker-compose-linux-$ARCHITECTURE" -o "$DOCKER_CONFIG/cli-plugins/docker-compose" || { echo "Download failed"; exit 1; }
-
-    # Moving Docker Compose to a system-wide directory (requires root privileges)
-    echo "Moving Docker Compose to /usr/local/bin..."
-    mv "$DOCKER_CONFIG/cli-plugins/docker-compose" /usr/local/bin || { echo "Move failed"; exit 1; }
-
-    # Making Docker Compose executable
-    echo "Setting execute permissions for Docker Compose..."
-    sudo chmod 755 /usr/local/bin/docker-compose || { echo "Failed to set permissions"; exit 1; }
-
-    # Verifying installation
-    if docker-compose version; then
-        echo "Docker Compose installed successfully."
+    if command_exists docker; then
+        echo "[3/5] Docker already installed ($(docker --version))"
+        echo "✓ Skipping Docker installation"
     else
-        echo "Failed to verify Docker Compose installation."
-        exit 1
+        echo "[3/5] Installing Docker..."
+
+        # Add Docker's official GPG key
+        install -m 0755 -d /etc/apt/keyrings
+        curl -fsSL https://download.docker.com/linux/ubuntu/gpg -o /etc/apt/keyrings/docker.asc
+        chmod a+r /etc/apt/keyrings/docker.asc
+
+        # Add Docker repository
+        echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/ubuntu $(. /etc/os-release && echo "$VERSION_CODENAME") stable" | \
+            tee /etc/apt/sources.list.d/docker.list > /dev/null
+
+        # Install Docker
+        apt-get update -qq
+        apt-get install -y -qq \
+            docker-ce \
+            docker-ce-cli \
+            containerd.io \
+            docker-buildx-plugin \
+            docker-compose-plugin || { echo "Failed to install Docker. Exiting..."; exit 1; }
+
+        # Start and enable Docker service
+        systemctl enable docker >/dev/null 2>&1
+        systemctl start docker >/dev/null 2>&1
+
+        echo "✓ Docker installed successfully ($(docker --version))"
     fi
 }
 
-add_user_km() {
-        echo "Creating user 'km' with a home directory and bash as the default shell..."
-        sudo useradd -m -s /bin/bash km || :
+# Function to create and configure km user
+setup_km_user() {
+    echo "[4/5] Setting up user 'km'..."
+
+    # Create km user if it doesn't exist
+    if id "$KM_USER" >/dev/null 2>&1; then
+        echo "  - User 'km' already exists"
+    else
+        useradd -m -s /bin/bash "$KM_USER"
+        echo "  - User 'km' created"
+    fi
+
+    # Add km to docker group
+    if groups "$KM_USER" | grep -q docker; then
+        echo "  - User 'km' already in docker group"
+    else
+        usermod -aG docker "$KM_USER"
+        echo "  - User 'km' added to docker group"
+    fi
+
+    echo "✓ User 'km' configured"
 }
 
-add_km_to_docker_group() {
-    echo "Adding user 'km' to the docker group..."
-    sudo usermod -aG docker km || :
+# Function to clone repository
+clone_repository() {
+    echo "[5/5] Setting up SEKIN repository..."
+
+    if [ -d "$SEKIN_DIR" ]; then
+        echo "  - Repository already exists at $SEKIN_DIR"
+        echo "  - Updating repository..."
+        sudo -u "$KM_USER" git -C "$SEKIN_DIR" fetch --all || echo "    Warning: Could not fetch updates"
+        sudo -u "$KM_USER" git -C "$SEKIN_DIR" pull || echo "    Warning: Could not pull updates"
+    else
+        echo "  - Cloning repository to $SEKIN_DIR..."
+        sudo -u "$KM_USER" git clone "$SEKIN_REPO" "$SEKIN_DIR" || { echo "Failed to clone repository. Exiting..."; exit 1; }
+    fi
+
+    echo "✓ Repository ready at $SEKIN_DIR"
 }
 
+# Function to start services
+start_services() {
+    echo ""
+    echo "======================================"
+    echo "Starting SEKIN services..."
+    echo "======================================"
 
-download_compose_and_change_owner(){
-    # Attempt to download the file up to 5 times
-    local max_attempts=5
-    local attempt=1
-
-    sudo -u km mkdir -p $SEKIN_DIR
-
-    while [ $attempt -le $max_attempts ]; do
-        echo "Attempt $attempt: Downloading compose.yml from ${COMPOSE_URL}..."
-        curl -o "${COMPOSE_PATH}" "${COMPOSE_URL}"
-
-        # Check if the download was successful
-        if [ $? -eq 0 ]; then
-            echo "Download successful. Setting ownership..."
-            # Set km as the owner of the downloaded file
-            sudo chown km:km "${COMPOSE_PATH}"
-
-            # Check if the chown command was successful
-            if [ $? -eq 0 ]; then
-                echo "Ownership set to 'km'."
-                return 0
-            else
-                echo "Failed to set ownership. Check permissions."
-                return 1
-            fi
-        else
-            echo "Download failed. Retrying..."
-            # Random delay between 1 and 3 seconds before retrying
-            sleep $((RANDOM % 3 + 1))
-            ((attempt++))
-        fi
-    done
-
-    echo "Failed to download the file after $max_attempts attempts."
-    return 1
-}
-
-# Function to run docker-compose up -d as user km
-run_docker_compose_as_km() {
-    echo "Starting docker-compose up as user km..."
-
-    # Execute docker-compose up -d as user km
-    if ! sudo -u km docker-compose -f "$COMPOSE_PATH" up -d; then
-        echo "Failed to start docker-compose. Exiting."
+    if [ ! -f "$COMPOSE_FILE" ]; then
+        echo "Error: compose.yml not found at $COMPOSE_FILE"
         exit 1
     fi
 
-    echo "docker-compose started successfully."
+    cd "$SEKIN_DIR"
+
+    echo "Starting docker compose in detached mode..."
+    sudo -u "$KM_USER" docker compose -f "$COMPOSE_FILE" up -d || { echo "Failed to start services. Exiting..."; exit 1; }
+
+    echo ""
+    echo "✓ Services started successfully!"
+    echo ""
+    echo "======================================"
+    echo "Setup Complete!"
+    echo "======================================"
+    echo ""
+    echo "Services running:"
+    sudo -u "$KM_USER" docker compose -f "$COMPOSE_FILE" ps
+    echo ""
+    echo "To view logs: docker compose -f $COMPOSE_FILE logs -f"
+    echo "To stop services: docker compose -f $COMPOSE_FILE down"
+    echo ""
 }
 
-clone_repo_as_km() {
-    # Specify the directory where you want to clone the repo
-    echo "Cloning the repository as user 'km'..."
-
-    # Clone the repository using sudo -u to run as user 'km'
-    if sudo -u km git clone "$SEKIN_GIT" "$SEKIN_DIR"; then
-        echo "Repository successfully cloned into $SEKIN_DIR."
-    else
-        echo "Failed to clone the repository. Please check permissions and repository URL."
-        exit 1
-    fi
-}
-
-update_services_versions() {
-    local compose_path="$COMPOSE_PATH"
-    local sekai_ver="$SEKAI_VER"
-    local interx_ver="$INTERX_VER"
-
-    # Check if the compose file exists
-    if [ ! -f "$compose_path" ]; then
-        echo "Compose file does not exist at the specified path: $compose_path"
-        return 1
-    fi
-
-    # Check and update SEKAI version if provided and not empty
-    if [[ -n "$sekai_ver" && $sekai_ver =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
-        sed -i "s|ghcr.io/kiracore/sekin/sekai:v[0-9.]*|ghcr.io/kiracore/sekin/sekai:$sekai_ver|g" "$compose_path"
-        echo "Updated SEKAI version to $sekai_ver in $compose_path"
-    else
-        echo "No valid SEKAI version provided, skipping update."
-    fi
-
-    # Check and update INTERX version if provided and not empty
-    if [[ -n "$interx_ver" && $interx_ver =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
-        sed -i "s|ghcr.io/kiracore/sekin/interx:v[0-9.]*|ghcr.io/kiracore/sekin/interx:$interx_ver|g" "$compose_path"
-        echo "Updated INTERX version to $interx_ver in $compose_path"
-    else
-        echo "No valid INTERX version provided, skipping update."
-    fi
-
-}
-
+# Main execution
 main() {
     update_system
     install_prerequisites
     install_docker
-    install_docker_compose
-    add_user_km
-    add_km_to_docker_group
-    download_compose_and_change_owner
-    update_services_versions
-    # clone_repo_as_km
-    run_docker_compose_as_km
+    setup_km_user
+    clone_repository
+    start_services
 }
 
 main
-
