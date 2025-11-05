@@ -1,5 +1,5 @@
 #!/bin/env bash
-curl -X POST "http://localhost:8282/api/execute" \
+curl -X POST "http://localhost:11000/api/execute" \
      -H "Content-Type: application/json" \
      -d '{
             "command": "join",
@@ -10,7 +10,7 @@ curl -X POST "http://localhost:8282/api/execute" \
                 "p2p_port": 26656,
                 "sekaidAddress": "sekai.local",
                 "interxAddress": "interx.local",
-                "mnemonic": "burden size near tragic fitness couch search suffer fluid output expire swap poem utility sing genuine replace dune tenant monkey sauce soccer twin sentence",
+                "mnemonic": "YOUR_MNEMONIC_PHRASE_HERE",
                 "local": false
             }
          }'
