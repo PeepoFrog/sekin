@@ -2,7 +2,6 @@ package commands
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"net/http"
 	"os"
@@ -231,23 +230,24 @@ func handleJoinCommand(args map[string]interface{}) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	err = interxhandler.InitInterx(ctx, masterMnemonic)
-	if err != nil {
-		return "", fmt.Errorf("unable to init interx: %w", err)
-	}
-	err = interxhandler.StartInterx(ctx)
-	if err != nil {
-		return "", fmt.Errorf("unable to start interx: %w", err)
-	}
-	err = interxhelper.CheckInterxStart(ctx)
-	if err != nil {
-		// If it's a timeout, return success with a warning since the join is actually working
-		if errors.Is(err, context.DeadlineExceeded) {
-			log.Warn("Interx start check timed out, but join process is continuing in background", zap.Error(err))
-			return fmt.Sprintf("Join command initiated for IP: %s. Blockchain sync is continuing in background.", ip), nil
-		}
-		return "", err
-	}
+
+	// err = interxhandler.InitInterx(ctx, masterMnemonic)
+	// if err != nil {
+	// 	return "", fmt.Errorf("unable to init interx: %w", err)
+	// }
+	// err = interxhandler.StartInterx(ctx)
+	// if err != nil {
+	// 	return "", fmt.Errorf("unable to start interx: %w", err)
+	// }
+	// err = interxhelper.CheckInterxStart(ctx)
+	// if err != nil {
+	// 	// If it's a timeout, return success with a warning since the join is actually working
+	// 	if errors.Is(err, context.DeadlineExceeded) {
+	// 		log.Warn("Interx start check timed out, but join process is continuing in background", zap.Error(err))
+	// 		return fmt.Sprintf("Join command initiated for IP: %s. Blockchain sync is continuing in background.", ip), nil
+	// 	}
+	// 	return "", err
+	// }
 	// Example of using the IP, and similar for other fields
 	// This function would contain the logic specific to handling a join command
 	return fmt.Sprintf("Join command processed for IP: %s", ip), nil
