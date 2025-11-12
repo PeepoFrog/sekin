@@ -4,7 +4,6 @@ go 1.22.3
 
 require (
 	github.com/BurntSushi/toml v1.4.0
-	github.com/KiraCore/kensho v0.12.1
 	github.com/KiraCore/tools/validator-key-gen v0.0.0-20240502110212-fd9aae04a1a7
 	github.com/cosmos/cosmos-sdk v0.50.11
 	github.com/cosmos/go-bip39 v1.0.0

@@ -12,12 +12,13 @@ import (
 	"sync"
 	"time"
 
-	"github.com/KiraCore/kensho/helper/networkparser"
+	// "github.com/KiraCore/kensho/helper/networkparser"
 	httpexecutor "github.com/kiracore/sekin/src/shidai/internal/http_executor"
 	"github.com/kiracore/sekin/src/shidai/internal/logger"
 	sekaihelper "github.com/kiracore/sekin/src/shidai/internal/sekai_handler/sekai_helper"
 	"github.com/kiracore/sekin/src/shidai/internal/types"
 	"github.com/kiracore/sekin/src/shidai/internal/utils"
+	networkparser "github.com/kiracore/sekin/src/shidai/pkg/network_parser"
 	"go.uber.org/zap"
 )
 
@@ -41,6 +42,8 @@ type TargetSeedKiraConfig struct {
 	InterxPort    string
 	SekaidRPCPort string
 	SekaidP2PPort string
+
+	StateSync bool
 }
 
 type syncInfo struct {
@@ -108,44 +111,25 @@ func retrieveNetworkInformation(ctx context.Context, tc *TargetSeedKiraConfig) (
 
 	// Parse all peers in the network
 	interxPort, _ := strconv.Atoi(tc.InterxPort)
-	nodes, _, err := networkparser.GetAllNodesV3(ctx, tc.IpAddress, interxPort, 3, false)
-	if err != nil {
-		log.Error("Failed to parse peers", zap.Error(err))
-		return nil, fmt.Errorf("unable to parse peers: %w", err)
+	// nodes, _, err := networkparser.GetAllNodesV3(ctx, tc.IpAddress, interxPort, 3, false)
+	var nodes map[string]networkparser.Node
+	if tc.StateSync {
+		nodes, _, err = networkparser.NewInterxNetworkParser().Scan(ctx, tc.IpAddress, interxPort, 3, false)
+		if err != nil {
+			log.Error("Failed to parse peers", zap.Error(err))
+			return nil, fmt.Errorf("unable to parse peers: %w", err)
+		}
 	}
 
-	var mu sync.Mutex
+	// var mu sync.Mutex
 	var wg sync.WaitGroup
 	var listOfSeeds []string
 
 	// Process each node to retrieve and parse public P2P list
 	for _, node := range nodes {
-		wg.Add(1)
-		go func(n networkparser.Node) {
-			defer wg.Done()
-			pupP2PListResponse, err := getPubP2PList(ctx, n.IP, tc.InterxPort)
-			if err != nil {
-				log.Debug("Failed to get public P2P list", zap.String("IP", n.IP), zap.Error(err))
-				return
-			}
-			local, err := parsePubP2PListResponse(pupP2PListResponse)
-			if err != nil {
-				log.Debug("Failed to parse public P2P list response", zap.String("IP", n.IP), zap.Error(err))
-				return
-			}
-
-			// Synchronize the addition of new seeds
-			mu.Lock()
-			for _, s := range local {
-				if !utils.ContainsValue(listOfSeeds, s) {
-					log.Debug("Adding new seed", zap.String("IP", s))
-					listOfSeeds = append(listOfSeeds, s)
-				} else {
-					log.Info("Seed already exists", zap.String("IP", s))
-				}
-			}
-			mu.Unlock()
-		}(node)
+		if node.ID != "" && node.IP != "" {
+			listOfSeeds = append(listOfSeeds, fmt.Sprintf("tcp://%s@%s:%v", node.ID, node.IP, types.DEFAULT_P2P_PORT))
+		}
 	}
 	wg.Wait()
 
@@ -213,7 +197,7 @@ func getConfigsBasedOnSeed(ctx context.Context, netInfo *networkInfo, tc *Target
 		return nil, fmt.Errorf("getting sync information %w", err)
 	}
 
-	if syncInfo != nil {
+	if syncInfo != nil && tc.StateSync {
 		cfgToUpdate.StateSync.TrustHash = syncInfo.trustHashBlock
 		cfgToUpdate.StateSync.TrustHeight = syncInfo.trustHeightBlock
 		cfgToUpdate.StateSync.RPCServers = strings.Join(syncInfo.rpcServers, ",")
@@ -256,7 +240,7 @@ func parseRPCfromSeedsList(seeds []string, tc *TargetSeedKiraConfig) ([]string, 
 		// tcp://23ca3770ae3874ac8f5a6f84a5cfaa1b39e49fc9@128.140.86.241:26656 -> 128.140.86.241:26657
 		parts := strings.Split(seed, "@")
 		if len(parts) != 2 {
-			return nil, fmt.Errorf("invalid seed format")
+			return nil, fmt.Errorf("invalid seed format, seed: %v", seed)
 		}
 
 		ipAndPort := strings.Split(parts[1], ":")

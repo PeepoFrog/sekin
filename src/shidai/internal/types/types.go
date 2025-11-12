@@ -28,15 +28,15 @@ type (
 )
 
 const (
-	SEKAI_HOME          string = "/sekai"
-	INTERX_HOME         string = "/interx"
-	DEFAULT_INTERX_PORT         int = 11000
-	DEFAULT_LOCAL_PROXY_PORT    int = 80
-	DEFAULT_PROXY_CALLER_PORT   int = 8080
-	DEFAULT_SEKAI_CALLER_PORT   int = 8080
-	DEFAULT_P2P_PORT            int = 26656
-	DEFAULT_RPC_PORT            int = 26657
-	DEFAULT_GRPC_PORT           int = 9090
+	SEKAI_HOME                string = "/sekai"
+	INTERX_HOME               string = "/interx"
+	DEFAULT_INTERX_PORT       int    = 11000
+	DEFAULT_LOCAL_PROXY_PORT  int    = 80
+	DEFAULT_PROXY_CALLER_PORT int    = 8080
+	DEFAULT_SEKAI_CALLER_PORT int    = 8080
+	DEFAULT_P2P_PORT          int    = 26656
+	DEFAULT_RPC_PORT          int    = 26657
+	DEFAULT_GRPC_PORT         int    = 9090
 
 	SEKAI_CONFIG_FOLDER  string = SEKAI_HOME + "/config"
 	INTERX_ADDRBOOK_PATH string = INTERX_HOME + "/addrbook.json"
@@ -70,6 +70,8 @@ const (
 	InvalidOrMissingRPCPort    = "invalid or missing RPC port"
 	InvalidOrMissingInterxPort = "invalid or missing interx port"
 
+	InvalidOrMissingStateSyncCheck = `invalid or missing "state_sync" param`
+
 	InvalidOrMissingTx = "invalid or missing tx"
 
 	InvalidRequest = "invalid request"
@@ -98,6 +100,8 @@ var (
 	ErrInvalidOrMissingRPCPort    = errors.New(InvalidOrMissingRPCPort)
 	ErrInvalidOrMissingInterxPort = errors.New(InvalidOrMissingInterxPort)
 
+	ErrInvalidOrMissingStateSyncCheck = errors.New(InvalidOrMissingStateSyncCheck)
+
 	ErrNoPublicIPAddresses       = errors.New(NoPublicIPAddresses)
 	ErrMultiplePublicIPAddresses = errors.New(MultiplePublicIPAddresses)
 
@@ -121,4 +125,19 @@ var (
 		"sekai.log":  "/syslog-data/syslog-ng/logs/sekai.log",
 		"interx.log": "/syslog-data/syslog-ng/logs/interx.log",
 	}
+)
+
+// interx endpoints
+const (
+	ENDPOINT_INTERX_STATUS string = "api/status"
+	// ENDPOINT_INTERX_NET_INFO string = "api/net_info" // old
+	ENDPOINT_INTERX_NET_INFO string = "api/tendermint/net_info"
+
+	// ENDPOINT_INTERX_GENESIS  string = "api/genesis" // old
+	ENDPOINT_INTERX_GENESIS  string = "api/tendermint/genesis"
+	ENDPOINT_INTERX_VALOPERS string = "api/valopers"
+
+	ENDPOINT_INTERX_DASHBOARD string = "dashboard"
+
+	// ENDPOINT_INTERX_GENSUM   string = "api/gensum" // not working at all
 )

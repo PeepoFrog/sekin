@@ -185,6 +185,7 @@ func handleJoinCommand(args map[string]interface{}) (string, error) {
 	if !utils.ValidateMnemonic(m) || !ok {
 		return "", types.ErrInvalidOrMissingMnemonic
 	}
+
 	pathsToDel := []string{"/sekai/", "/interx/"}
 	for _, path := range pathsToDel {
 		err := os.RemoveAll(path)
@@ -212,8 +213,12 @@ func handleJoinCommand(args map[string]interface{}) (string, error) {
 	if !utils.ValidatePort(int(interx)) || !ok {
 		return "", types.ErrInvalidOrMissingInterxPort
 	}
+	statesync, ok := args["state_sync"].(bool)
+	if !ok {
+		return "", types.ErrInvalidOrMissingStateSyncCheck
+	}
 
-	tc := configconstructor.TargetSeedKiraConfig{IpAddress: ip, InterxPort: strconv.Itoa(int(interx)), SekaidRPCPort: strconv.Itoa(int(rpc)), SekaidP2PPort: strconv.Itoa(int(p2p))}
+	tc := configconstructor.TargetSeedKiraConfig{IpAddress: ip, InterxPort: strconv.Itoa(int(interx)), SekaidRPCPort: strconv.Itoa(int(rpc)), SekaidP2PPort: strconv.Itoa(int(p2p)), StateSync: statesync}
 	err = sekaihandler.InitSekaiJoiner(ctx, &tc, masterMnemonic)
 	if err != nil {
 		return "", err
