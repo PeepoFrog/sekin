@@ -16,6 +16,7 @@ import (
 )
 
 const endpointStatus string = "status"
+const endpointNetInfo string = "net_info"
 
 var (
 	log = logger.GetLogger()
@@ -69,4 +70,23 @@ func CheckSekaiStart(ctx context.Context) error {
 			}
 		}
 	}
+}
+
+func GetNetInfo(ctx context.Context, ipAddress, rpcPort string) (*sekai.NetInfo, error) {
+	url := fmt.Sprintf("http://%s:%s/%s", ipAddress, rpcPort, endpointNetInfo)
+	client := &http.Client{}
+	log.Debug("Querying sekai status by url:", zap.String("url", url))
+
+	body, err := httpexecutor.DoHttpQuery(ctx, client, url, "GET")
+	if err != nil {
+		return nil, err
+	}
+
+	var response *sekai.NetInfo
+	err = json.Unmarshal(body, &response)
+	if err != nil {
+		return nil, err
+	}
+
+	return response, nil
 }
