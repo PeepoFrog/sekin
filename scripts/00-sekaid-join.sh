@@ -11,6 +11,11 @@ curl -X POST "http://localhost:8282/api/execute" \
                 "sekaidAddress": "sekai.local",
                 "interxAddress": "proxy.local",
                 "mnemonic": "YOUR_MNEMONIC_PHRASE_HERE",
-                "local": false
+                "local": false,
+                "state_sync": false
             }
          }'
+
+# To enable state_sync, retrieve the "earliest_block_height" value from http://localhost:26657/status.
+# Then, update the "start_block" field in worker/cosmos/sai-cosmos-indexer/config.yml 
+# to match the retrieved "earliest_block_height" value, and restart the Cosmos indexer container.
