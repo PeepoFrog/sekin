@@ -1,0 +1,1 @@
+*/5 * * * * /usr/sbin/logrotate -v /etc/logrotate.d/logrotate.conf >> /var/log/syslog-ng/logs/logrotate.log 2>&1

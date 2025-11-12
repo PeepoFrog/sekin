@@ -1,41 +1,102 @@
+---
 name: Repository Dispatch
 
 on:
   repository_dispatch:
     types: [release_merged]
 
+env:
+  REGISTRY: ghcr.io
+  REPO: kiracore/sekin
 jobs:
-  Build_and_publish:
-    runs-on: ubuntu-20.04
+  Build_publish_and_sign:
+    runs-on: ubuntu-latest
     steps:
-      - name: Extract repository release name 
-        id: name-extract
-        run: echo "NAME=${{ github.event.client_payload.name }}" >> $GITHUB_ENV
-      
-      - name: Extract repository release version 
-        id: version-extract
-        run: echo "VERSION=${{ github.event.client_payload.version }}" >> $GITHUB_ENV
-
+      - name: Extract payload data # OCI image spec
+        id: payload-extract
+        run: |
+          echo "SEKIN_APP_VERSION=${{ github.event.client_payload.version }}" >> $GITHUB_ENV
+          echo "AUTHORS=${{ github.event.client_payload.authors }}" >> $GITHUB_ENV
+          echo "URL=${{ github.event.client_payload.url }}" >> $GITHUB_ENV
+          echo "DOCS=${{ github.event.client_payload.documentation }}" >> $GITHUB_ENV
+          echo "SOURCE=${{ github.event.client_payload.source }}" >> $GITHUB_ENV
+          echo "VENDOR=${{ github.event.client_payload.vendor }}" >> $GITHUB_ENV
+          echo "LICENSES=${{ github.event.client_payload.licenses }}" >> $GITHUB_ENV
+          echo "TITLE=${{ github.event.client_payload.title }}" >> $GITHUB_ENV
+          echo "DESC=${{ github.event.client_payload.description }}" >> $GITHUB_ENV
+          
       - name: Debug info
         run: |
-          echo "VERSION ${{ env.VERSION }}"
-          echo "NAME ${{ env.NAME }}"
+          echo "SEKIN_APP_VERSION: ${{ env.SEKIN_APP_VERSION }}"
+          echo "          AUTHORS: ${{ env.AUTHORS }}"
+          echo "              URL: ${{ env.URL }}"
+          echo "             DOCS: ${{ env.SOURCE }}"
+          echo "           VENDOR: ${{ env.VENDOR }}"
+          echo "         LICENSES: ${{ env.LICENSES }}"
+          echo "            TITLE: ${{ env.TITLE }}"
+          echo "             DESC: ${{ env.DESC }}"
+
+      - name: Install cosign
+        uses: sigstore/cosign-installer@e1523de7571e31dbe865fd2e80c5c7c23ae71eb4 #v3.4.0
+        with:
+          cosign-release: 'v2.2.3'
+
+      - name: Confirm cosign installation
+        run: cosign version
 
       - name: Checkout
         uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 #v4.1.1
 
-      - name: Log in GHCR
+      - name: Log in registry
         uses: docker/login-action@343f7c4344506bcbf9b4de18042ae17996df046d #v3.0.0
         with:
-          registry: ghcr.io
+          registry: ${{ env.REGISTRY }}
           username: ${{ github.actor }}
-          password: ${{ secrets.TOKEN }}
-      
-      - name: Build and push Docker iamge
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push Docker image
         uses: docker/build-push-action@4a13e500e55cf31b7a5d59a38ab2040ab0f42f56 #v5.2.1
         with:
           context: .
-          file: ./${{ env.NAME }}.Dockerfile
+          file: ./${{ env.TITLE }}.Dockerfile
           push: true
-          tags: ghcr.io/mrlutik/sekin:${{ env.NAME }}_${{ env.VERSION }}
+          tags: ${{ env.REGISTRY }}/${{ env.REPO }}/${{ env.TITLE }}:v${{ env.SEKIN_APP_VERSION }}
+          labels: |
+            org.opencontainers.image.authors=${{ env.AUTHORS }}
+            org.opencontainers.image.url=${{ env.URL }}
+            org.opencontainers.image.documentation=${{ env.DOCS }}
+            org.opencontainers.image.source=${{ env.SOURCE }}
+            org.opencontainers.image.vendor=${{ env.VENDOR }}
+            org.opencontainers.image.licenses=${{ env.LICENSES }}
+            org.opencontainers.image.title=${{ env.TITLE }}
+            org.opencontainers.image.description=${{ env.DESC }}
 
+      - name: Retrieve image digest
+        id: get-digest
+        run: |
+          DIGEST=$(docker inspect --format='{{index .RepoDigests 0}}' ${{ env.REGISTRY }}/${{ env.REPO }}/${{ env.TITLE }}:v${{ env.SEKIN_APP_VERSION }})
+          echo "Digest: $DIGEST"
+          echo "::set-output name=digest::$DIGEST"
+
+      # Updated signing step to use the retrieved digest
+      - name: Sign published Docker image with digest
+        env:
+          COSIGN_PASSWORD: ${{ secrets.COSIGN_PASSWORD }}
+        run: |
+          echo "${{ secrets.COSIGN_PRIVATE_KEY }}" > cosign.key
+          cosign sign --key cosign.key ${{ steps.get-digest.outputs.digest }} --yes
+          # Zero out the key file securely
+          dd if=/dev/zero of=cosign.key bs=1 count=$(stat --format=%s cosign.key)
+          rm -f cosign.key
+
+      - name: Update image version in compose.yml
+        run: |
+          sed -i "s/${{ env.TITLE }}:v[0-9]*\.[0-9]*\.[0-9]*/${{ env.TITLE }}:v${{ env.SEKIN_APP_VERSION }}/g" compose.yml
+      - name: Commit and push updated compose.yml
+        run: |
+          git config --global user.email "actions@github.com"
+          git config --global user.name "GitHub Actions"
+          git add compose.yml
+          git commit -m "feat(cidi_auto):Update compose.yml" \
+                     -m "* Update image ${{ env.TITLE }} with newer version v${{ env.SEKIN_APP_VERSION }}"
+          git push
