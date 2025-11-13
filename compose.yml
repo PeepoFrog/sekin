@@ -88,6 +88,8 @@ services:
         syslog-address: "udp://10.1.0.2:514"
         syslog-facility: local0
         tag: "storage"
+    ports:
+      - "8880:8880"
     expose:
       - "8880"
     volumes:
@@ -109,6 +111,8 @@ services:
         syslog-address: "udp://10.1.0.2:514"
         syslog-facility: local0
         tag: "cosmos-indexer"
+    ports:
+      - "8883:8883"
     expose:
       - "8883"
     volumes:
@@ -130,6 +134,8 @@ services:
         syslog-address: "udp://10.1.0.2:514"
         syslog-facility: local0
         tag: "cosmos-interaction"
+    ports:
+      - "8884:8884"
     expose:
       - "8884"
     volumes:
@@ -152,6 +158,8 @@ services:
         syslog-address: "udp://10.1.0.2:514"
         syslog-facility: local0
         tag: "ethereum-indexer"
+    ports:
+      - "8881:8881"
     expose:
       - "8881"
     volumes:
@@ -175,6 +183,8 @@ services:
         syslog-address: "udp://10.1.0.2:514"
         syslog-facility: local0
         tag: "ethereum-interaction"
+    ports:
+      - "8882:8882"
     expose:
       - "8882"
     volumes:
