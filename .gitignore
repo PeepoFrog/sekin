@@ -37,9 +37,15 @@ worker/ethereum/*
 worker/ethereum/sai-ethereum-indexer/*
 !worker/ethereum/sai-ethereum-indexer/config.json
 !worker/ethereum/sai-ethereum-indexer/contracts.json
-!worker/ethereum/sai-ethereum-indexer/block.data
 
 !worker/ethereum/sai-ethereum-contract-interaction/
 worker/ethereum/sai-ethereum-contract-interaction/*
 !worker/ethereum/sai-ethereum-contract-interaction/config.yml
 !worker/ethereum/sai-ethereum-contract-interaction/contracts.json
+
+# Ignore everything in sekai except configs
+sekai/*
+sekai/config/*
+
+# Ignore everyting in interx
+interx/*
